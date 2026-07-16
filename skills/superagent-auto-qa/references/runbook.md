@@ -1,0 +1,157 @@
+# Runbook
+
+Run commands from `superagentv2_agent`.
+
+## Activate Runner API
+
+```bash
+python runner_api.py
+# or
+uvicorn runner_api:app --host 0.0.0.0 --port 8090
+```
+
+Frontend proxy expects the runner at `QA_RUNNER_INTERNAL_URL` or local port
+`8090`.
+
+## Quick Health
+
+```bash
+curl -s http://localhost:8090/health
+curl -s http://localhost:8090/eval/tests?per_page=5
+```
+
+## Full Manifest For Codex Authoring
+
+```bash
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_manifest.py --root . --out /tmp/qa-manifest.json
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_manifest.py --root . --require-business-schema --out /tmp/qa-manifest.json
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_manifest.py --root . --source local --jurisdiction AZ
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_manifest.py --source api --runner-url http://localhost:8090
+```
+
+Use this before writing tests so field names, addendum slugs, assertion kinds,
+suites, profiles, and lifecycle values come from the current code/backend
+manifest.
+
+The backend business manifest can take 30+ seconds locally because it transforms
+published pdfMe templates. The runner default timeout is controlled by
+`QA_BUSINESS_MANIFEST_TIMEOUT_SECONDS` and should be at least `120` for local
+authoring.
+
+`qa_manifest.py` loads environment values before selecting URLs. Load order is:
+explicit `--env-file` values, agent `.env.local`, `.env.dev`, `.env`, frontend
+`.env`, then backend `.env`; already-exported shell variables win. Backend
+manifest URL precedence is `QA_BUSINESS_MANIFEST_URL`, then
+`TEST_BACKEND_URL`, `BACKEND_URL`, then `NEXT_PUBLIC_API_BASE_URL`, with
+`/v1/admin/qa/manifest/business-schema` appended to the selected backend base.
+Auth uses `QA_MANIFEST_BACKEND_TOKEN`/`BACKEND_SERVICE_TOKEN` for bearer auth
+or `BACKEND_API_KEY` for `X-API-KEY`.
+
+## Documentation Bundle
+
+```bash
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_docs.py --root . --list
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_docs.py --root . --out /tmp/superagent-qa-docs.md
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_docs.py --root . --no-ui --out /tmp/superagent-qa-repo-docs.md
+```
+
+Use the list mode before opening large docs. Use bundle mode when a future MCP,
+subagent, or offline Codex session needs a portable QA documentation snapshot.
+
+## Current Catalog Inventory
+
+```bash
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_catalog.py --root .
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_catalog.py --root . --json --out /tmp/qa-catalog.json
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_catalog.py --root . --type replay
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_catalog.py --root . --type microtest
+```
+
+Use this to learn current tests, snapshots, lifecycle values, missing explicit
+`test_type`, and YAML references without relying on folder conventions.
+
+## Replay
+
+```bash
+python evaluate.py replay simulations/regressions/cross-flow/ACT-flat-cash-happy.yaml --live
+python evaluate.py replay simulations/regressions/cross-flow/ACT-flat-cash-happy.yaml --save-log
+python evaluate.py replay simulations/regressions/cross-flow/ACT-flat-cash-happy.yaml --offline-backend --save-log
+```
+
+Use `--live` for human-readable turn output. Use `--save-log` for JSON/Markdown
+artifacts under `artifacts/eval-runs/`.
+
+## Extraction
+
+```bash
+python evaluate.py extraction simulations/extraction/EXT-purchase-cash-gate.yaml --save-log
+python evaluate.py extraction-all --dir simulations/extraction --category purchase --save-log
+```
+
+Use `--repeat N --min-pass-rate X` for reliability checks.
+
+## Micro-Tests
+
+```bash
+python evaluate.py micro-test simulations/microtests/addenda/example.yaml --offline-backend --save-report
+python evaluate.py micro-test simulations/microtests/addenda/example.yaml --live
+```
+
+Default admin dispatcher uses `--offline-backend` for micro-tests.
+
+## Suites And Profiles
+
+```bash
+python evaluate.py eval-suite purchase-replay --dry-run
+python evaluate.py eval-suite purchase-replay --save-log
+python evaluate.py eval-suite --profile pr --dry-run
+python evaluate.py eval-suite --profile nightly --save-log
+```
+
+Known suite names are defined in `evaluate.py` under the `eval-suite` parser.
+Known profiles are in `EVAL_PROFILES`.
+
+## Real Room To Candidate
+
+```bash
+python evaluate.py replay-room --room-id <room_id> --jira DEV-XXX --generate-only
+python evaluate.py replay-room --room-id <room_id> --jira DEV-XXX --mode hybrid --live --save-log
+```
+
+For authenticated debug imports, use `--bearer-token-stdin` or
+`--bearer-token-env`. Never print tokens.
+
+## Generate Scenario CLI
+
+```bash
+python evaluate.py generate-scenario "cash purchase, buyer provides all info upfront" --out simulations/regressions/generated/QA-CASH.yaml
+python evaluate.py generate-scenario "financed purchase with HOA addendum" --run --live
+```
+
+The admin UI should prefer `POST /eval/generate-scenario-draft`, because it is
+manifest-grounded and returns lint/review metadata.
+
+## Category Runs
+
+```bash
+python evaluate.py run-category qa-init-p0 --dry-run
+python evaluate.py run-category qa-init-p0 --area init --priority p0 --save-report
+```
+
+Use this for taxonomy-driven batches across replay and micro-tests.
+
+## Validation
+
+```bash
+.venv/bin/python -m py_compile runner_api.py evaluate.py
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_inventory.py --root .
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_catalog.py --root .
+.venv/bin/python .agents/skills/superagent-auto-qa/scripts/qa_docs.py --root . --list
+```
+
+For frontend changes:
+
+```bash
+cd ../superagentv2_frontend
+npx tsc --noEmit
+```

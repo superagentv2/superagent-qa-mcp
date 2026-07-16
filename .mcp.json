@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "superagent_qa": {
+      "type": "http",
+      "url": "http://127.0.0.1:3009/mcp",
+      "bearer_token_env_var": "MCP_TOKEN"
+    }
+  }
+}
