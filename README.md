@@ -132,6 +132,157 @@ The plugin installs:
 The plugin does not include secrets. Admin users provide only `MCP_TOKEN`.
 `QA_RUNNER_TOKEN` stays in the hosted MCP environment.
 
+### Install the Codex Plugin
+
+Install the plugin from the SuperAgent marketplace repo:
+
+```bash
+codex plugin marketplace add https://github.com/superagentv2/superagent-qa-mcp.git
+codex plugin add superagent-qa@superagent
+```
+
+Then restart Codex so the plugin skill and MCP server are loaded.
+
+Verify the plugin is available:
+
+```bash
+codex plugin list
+codex mcp list
+```
+
+`codex plugin list` should include `superagent-qa@superagent`.
+`codex mcp list` should include `superagent_qa`.
+
+If the marketplace was already added and the plugin install is being repaired,
+remove and add the plugin again:
+
+```bash
+codex plugin remove superagent-qa
+codex plugin add superagent-qa@superagent
+```
+
+### Set MCP_TOKEN Permanently
+
+The plugin reads the admin-facing MCP token from the `MCP_TOKEN` environment
+variable. Do not put `QA_RUNNER_TOKEN` on tester machines.
+
+#### macOS zsh
+
+```bash
+mkdir -p ~/.config/superagent
+nano ~/.config/superagent/qa-mcp.env
+```
+
+Add:
+
+```bash
+export MCP_TOKEN="admin-facing-mcp-secret"
+```
+
+Lock down the file and load it from zsh:
+
+```bash
+chmod 600 ~/.config/superagent/qa-mcp.env
+printf '\n[ -f ~/.config/superagent/qa-mcp.env ] && source ~/.config/superagent/qa-mcp.env\n' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Verify without printing the token:
+
+```bash
+test -n "$MCP_TOKEN" && echo "MCP_TOKEN is set"
+```
+
+#### Linux bash
+
+```bash
+mkdir -p ~/.config/superagent
+nano ~/.config/superagent/qa-mcp.env
+```
+
+Add:
+
+```bash
+export MCP_TOKEN="admin-facing-mcp-secret"
+```
+
+Lock down the file and load it from bash:
+
+```bash
+chmod 600 ~/.config/superagent/qa-mcp.env
+printf '\n[ -f ~/.config/superagent/qa-mcp.env ] && source ~/.config/superagent/qa-mcp.env\n' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Verify without printing the token:
+
+```bash
+test -n "$MCP_TOKEN" && echo "MCP_TOKEN is set"
+```
+
+If the user uses zsh on Linux, add the same source line to `~/.zshrc` instead.
+
+#### Windows PowerShell
+
+Set a persistent user environment variable:
+
+```powershell
+[Environment]::SetEnvironmentVariable("MCP_TOKEN", "admin-facing-mcp-secret", "User")
+```
+
+Close and reopen PowerShell or restart Codex.
+
+Verify without printing the token:
+
+```powershell
+if ($env:MCP_TOKEN) { "MCP_TOKEN is set" } else { "MCP_TOKEN is missing" }
+```
+
+#### Windows Command Prompt
+
+```cmd
+setx MCP_TOKEN "admin-facing-mcp-secret"
+```
+
+Close and reopen Command Prompt or restart Codex.
+
+Verify without printing the token:
+
+```cmd
+if defined MCP_TOKEN (echo MCP_TOKEN is set) else (echo MCP_TOKEN is missing)
+```
+
+### Update the Codex Plugin
+
+There are two update paths:
+
+- Hosted MCP server changes: deploy this repo. Users do not need to reinstall
+  the plugin if `.mcp.json` and the skill text did not change.
+- Plugin package changes: update/reinstall the plugin so Codex refreshes the
+  bundled `.mcp.json`, plugin metadata, and `superagent-auto-qa` skill.
+
+After plugin files are changed and pushed, users should run:
+
+```bash
+codex plugin marketplace upgrade superagent
+codex plugin remove superagent-qa
+codex plugin add superagent-qa@superagent
+```
+
+Then restart Codex.
+
+Use this update flow when any of these files change:
+
+```text
+.codex-plugin/plugin.json
+.mcp.json
+.agents/plugins/marketplace.json
+skills/superagent-auto-qa/
+```
+
+If only `MCP_TOKEN` changes, update the local environment variable and restart
+Codex. No plugin reinstall is needed.
+
 For DEV testing, `.mcp.json` currently points at:
 
 ```text
