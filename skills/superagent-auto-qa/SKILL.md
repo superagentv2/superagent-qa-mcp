@@ -24,12 +24,17 @@ For any non-trivial QA task:
 1. Call `qa_health_get` to confirm the QA runner is reachable.
 2. Call `qa_manifest_get` before choosing contract fields, tool names,
    assertion kinds, templates, addenda, suites, or lifecycle values.
-3. Use `qa_catalog_search`, `qa_catalog_get`, or `qa_files_tree_get` to learn
-   what tests and snapshots already exist.
-4. Read definitions with `qa_definition_get` or raw files with
+3. Prefer `qa_catalog_search` for catalog discovery. Use filters/search terms
+   whenever possible instead of fetching the whole catalog.
+4. Use `qa_files_tree_get` when the task is about folder/file structure,
+   snapshots, moves, deletes, or references.
+5. Use `qa_catalog_get` only when a truly full normalized catalog snapshot is
+   needed. Expect it to be slow: it returns the entire catalog payload, currently
+   large, and latency will increase as hosted QA accumulates more tests.
+6. Read definitions with `qa_definition_get` or raw files with
    `qa_file_content_get`.
-5. Before saving, lint with `qa_lint_definition`.
-6. For writes, preserve optimistic locks such as `expectedHash` when the API
+7. Before saving, lint with `qa_lint_definition`.
+8. For writes, preserve optimistic locks such as `expectedHash` when the API
    returns one.
 
 ## Mental Model
@@ -90,6 +95,14 @@ not only from folder names.
 Use `qa_files_tree_get` before moving or deleting. Snapshot paths may be
 referenced from micro-test YAML. If deleting or moving a referenced file,
 inspect references and report the impact before making the change.
+
+**Catalog discovery**
+
+Use `qa_catalog_search` first. It is the normal tool for finding tests by text,
+type, lifecycle, result, priority, path, or metadata. Avoid `qa_catalog_get` for
+interactive discovery because it fetches every normalized row. If a user asks
+for the entire catalog, warn that the call can be slow and may approach or
+exceed client timeouts as the catalog grows.
 
 ## Safety Rules
 
