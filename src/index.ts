@@ -25,6 +25,7 @@ const boolDefault = (value: boolean) => z.boolean().default(value);
 const intDefault = (value: number, min = 1, max = 500) =>
   z.number().int().min(min).max(max).default(value);
 const optionalHash = z.string().optional();
+const requirementsWriteQuery = { include_coverage: false };
 
 const runOptionsSchema = {
   cleanup: boolDefault(true),
@@ -456,7 +457,13 @@ server.tool(
     expectedHash: optionalHash,
   },
   async ({ yaml, expectedHash }) =>
-    jsonText(await qa.put("/eval/requirements/yaml", { yaml, expected_hash: expectedHash }))
+    jsonText(
+      await qa.put(
+        "/eval/requirements/yaml",
+        { yaml, expected_hash: expectedHash },
+        requirementsWriteQuery
+      )
+    )
 );
 
 server.tool(
@@ -467,7 +474,13 @@ server.tool(
     expectedHash: optionalHash,
   },
   async ({ requirement, expectedHash }) =>
-    jsonText(await qa.post("/eval/requirements", { requirement, expected_hash: expectedHash }))
+    jsonText(
+      await qa.post(
+        "/eval/requirements",
+        { requirement, expected_hash: expectedHash },
+        requirementsWriteQuery
+      )
+    )
 );
 
 server.tool(
@@ -480,10 +493,14 @@ server.tool(
   },
   async ({ requirementId, requirement, expectedHash }) =>
     jsonText(
-      await qa.put(`/eval/requirements/${encode(requirementId)}`, {
-        requirement,
-        expected_hash: expectedHash,
-      })
+      await qa.put(
+        `/eval/requirements/${encode(requirementId)}`,
+        {
+          requirement,
+          expected_hash: expectedHash,
+        },
+        requirementsWriteQuery
+      )
     )
 );
 
@@ -497,10 +514,14 @@ server.tool(
   },
   async ({ requirementId, expectedHash, force }) =>
     jsonText(
-      await qa.delete(`/eval/requirements/${encode(requirementId)}`, {
-        expected_hash: expectedHash,
-        force,
-      })
+      await qa.delete(
+        `/eval/requirements/${encode(requirementId)}`,
+        {
+          expected_hash: expectedHash,
+          force,
+        },
+        requirementsWriteQuery
+      )
     )
 );
 
@@ -512,7 +533,13 @@ server.tool(
     expectedHash: optionalHash,
   },
   async ({ requirements, expectedHash }) =>
-    jsonText(await qa.post("/eval/requirements/bulk", { requirements, expected_hash: expectedHash }))
+    jsonText(
+      await qa.post(
+        "/eval/requirements/bulk",
+        { requirements, expected_hash: expectedHash },
+        requirementsWriteQuery
+      )
+    )
 );
 
 server.tool(
@@ -524,7 +551,13 @@ server.tool(
     force: boolDefault(false),
   },
   async ({ ids, expectedHash, force }) =>
-    jsonText(await qa.post("/eval/requirements/bulk-delete", { ids, expected_hash: expectedHash, force }))
+    jsonText(
+      await qa.post(
+        "/eval/requirements/bulk-delete",
+        { ids, expected_hash: expectedHash, force },
+        requirementsWriteQuery
+      )
+    )
 );
 
 server.tool("qa_coverage_get", "Fetch computed QA coverage.", {}, async () => {

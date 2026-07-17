@@ -36,6 +36,10 @@ For any non-trivial QA task:
 7. Before saving, lint with `qa_lint_definition`.
 8. For writes, preserve optimistic locks such as `expectedHash` when the API
    returns one.
+9. Requirement write tools intentionally use lightweight writes: they save the
+   requirements document and return the updated requirements/hash without
+   recomputing full coverage. Call `qa_coverage_get` separately only when the
+   coverage graph is needed.
 
 ## Mental Model
 
@@ -103,6 +107,14 @@ type, lifecycle, result, priority, path, or metadata. Avoid `qa_catalog_get` for
 interactive discovery because it fetches every normalized row. If a user asks
 for the entire catalog, warn that the call can be slow and may approach or
 exceed client timeouts as the catalog grows.
+
+**Requirements and coverage**
+
+Use `qa_requirements_get` to inspect the requirements document and
+`qa_coverage_get` to compute the heavier coverage graph. Create/update/delete
+requirement tools use the runner's `include_coverage=false` mode by default, so
+they should not be followed by `qa_coverage_get` unless the user specifically
+needs refreshed coverage.
 
 ## Safety Rules
 

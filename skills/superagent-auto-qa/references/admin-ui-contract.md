@@ -65,6 +65,7 @@ Main current endpoints in `runner_api.py`:
 - `POST /eval/requirements`
 - `PUT /eval/requirements/{requirement_id}`
 - `DELETE /eval/requirements/{requirement_id}`
+- `POST /eval/requirements/bulk`
 - `POST /eval/requirements/bulk-delete`
 - `GET /eval/requirements/yaml`
 - `PUT /eval/requirements/yaml`
@@ -82,6 +83,13 @@ Coverage is now requirements-backed. The source of truth is
 `docs/evaluation/COVERAGE_MATRIX.md` may still exist as historical input, but
 the admin Coverage view reads the YAML requirements document and the computed
 graph returned by `GET /eval/coverage`.
+
+Requirement mutation endpoints accept `include_coverage` as an optional query
+parameter. The default is `true` for backwards compatibility with the admin UI:
+the response is the full computed coverage graph. MCP/Codex write tools should
+use `include_coverage=false` so create/update/delete/bulk writes return only the
+updated requirements document and hash. Fetch `GET /eval/coverage` separately
+when a coverage graph is actually needed.
 
 Requirement YAML shape:
 
