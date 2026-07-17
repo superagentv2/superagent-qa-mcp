@@ -8,9 +8,9 @@ services:
     ports:
       - "3009:3009"
     environment:
-      MCP_TRANSPORT: "http"
-      MCP_HOST: "0.0.0.0"
-      MCP_PORT: "3009"
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-http}
+      MCP_HOST: ${MCP_HOST:-0.0.0.0}
+      MCP_PORT: ${MCP_PORT:-3009}
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-}
       MCP_TOKEN: ${MCP_TOKEN}
       QA_RUNNER_URL: ${QA_RUNNER_URL:-http://host.docker.internal:8090}

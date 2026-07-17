@@ -84,6 +84,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           source: "docker-compose.dev.yml"
           target: "/srv/apps/superagent/superagent-qa-mcp"
@@ -93,6 +94,9 @@ jobs:
         env:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ github.token }}
+          MCP_TRANSPORT: ${{ vars.MCP_TRANSPORT }}
+          MCP_HOST: ${{ vars.MCP_HOST }}
+          MCP_PORT: ${{ vars.MCP_PORT }}
           MCP_ALLOWED_HOSTS: ${{ vars.MCP_ALLOWED_HOSTS }}
           MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
           QA_RUNNER_URL: ${{ vars.QA_RUNNER_URL }}
@@ -101,8 +105,9 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
-          envs: GHCR_USERNAME,GHCR_TOKEN,MCP_ALLOWED_HOSTS,MCP_TOKEN,QA_RUNNER_URL,QA_RUNNER_TOKEN
+          envs: GHCR_USERNAME,GHCR_TOKEN,MCP_TRANSPORT,MCP_HOST,MCP_PORT,MCP_ALLOWED_HOSTS,MCP_TOKEN,QA_RUNNER_URL,QA_RUNNER_TOKEN
           script: |
             set -e
             mkdir -p /srv/apps/superagent/superagent-qa-mcp
