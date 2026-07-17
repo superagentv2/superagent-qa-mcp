@@ -132,14 +132,14 @@ The plugin installs:
 The plugin does not include secrets. Admin users provide only `MCP_TOKEN`.
 `QA_RUNNER_TOKEN` stays in the hosted MCP environment.
 
-For local hosted-style testing, `.mcp.json` currently points at:
+For DEV testing, `.mcp.json` currently points at:
 
 ```text
-http://127.0.0.1:3009/mcp
+http://88.198.201.6:3009/mcp
 ```
 
 Before distributing the plugin broadly, change that URL to the deployed MCP
-endpoint, for example:
+domain, for example:
 
 ```text
 https://qa-mcp.superagent.estate/mcp
