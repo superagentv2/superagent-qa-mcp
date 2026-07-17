@@ -1,0 +1,20 @@
+{
+  "name": "superagent",
+  "interface": {
+    "displayName": "SuperAgent"
+  },
+  "plugins": [
+    {
+      "name": "superagent-qa",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
