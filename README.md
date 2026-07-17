@@ -48,6 +48,43 @@ QA_RUNNER_URL=http://qa-runner:8090
 QA_RUNNER_TOKEN=private-runner-secret
 ```
 
+## Docker DEV Deployment
+
+This repo deploys as a standalone Docker Compose project on the SuperAgent
+server. The DEV workflow builds and pushes `ghcr.io/superagentv2/superagent-qa-mcp:dev`,
+copies `deployment/docker-compose.dev.yml` to:
+
+```text
+/srv/apps/superagent/superagent-qa-mcp
+```
+
+and restarts the compose project:
+
+```bash
+docker compose -p qa-mcp-dev -f docker-compose.dev.yml up -d --force-recreate
+```
+
+Required GitHub DEV environment secrets:
+
+```text
+HOST
+SSH_USER
+SSH_KEY
+SSH_PORT
+MCP_TOKEN
+QA_RUNNER_TOKEN
+```
+
+Required GitHub DEV environment variables:
+
+```text
+QA_RUNNER_URL=http://host.docker.internal:8090
+MCP_ALLOWED_HOSTS=
+```
+
+`MCP_ALLOWED_HOSTS` can stay empty while testing direct host/port access. Set it
+to the hosted MCP domain once a reverse proxy is in front of the service.
+
 ## Tool Groups
 
 The server exposes the QA automation API as MCP tools:

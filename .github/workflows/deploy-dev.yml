@@ -1,0 +1,132 @@
+name: Deploy DEV (QA MCP)
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm'
+        required: true
+      commit:
+        description: "Optional commit hash (leave empty to deploy selected branch HEAD)"
+        required: false
+
+concurrency:
+  group: qa-mcp-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Validate confirmation (manual only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo "❌ Deployment cancelled. Type 'deploy' to confirm."
+            exit 1
+          fi
+          echo "✅ Deployment confirmed"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit || github.ref }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}:dev
+          cache-from: type=gha,scope=qa-mcp-dev
+          cache-to: type=gha,mode=max,scope=qa-mcp-dev
+
+      - name: Prepare files for transfer
+        run: cp deployment/docker-compose.dev.yml ./docker-compose.dev.yml
+
+      - name: Copy Docker Compose to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "docker-compose.dev.yml"
+          target: "/srv/apps/superagent/superagent-qa-mcp"
+
+      - name: Pull image & restart QA MCP on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
+          MCP_ALLOWED_HOSTS: ${{ vars.MCP_ALLOWED_HOSTS }}
+          MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
+          QA_RUNNER_URL: ${{ vars.QA_RUNNER_URL }}
+          QA_RUNNER_TOKEN: ${{ secrets.QA_RUNNER_TOKEN }}
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: GHCR_USERNAME,GHCR_TOKEN,MCP_ALLOWED_HOSTS,MCP_TOKEN,QA_RUNNER_URL,QA_RUNNER_TOKEN
+          script: |
+            set -e
+            mkdir -p /srv/apps/superagent/superagent-qa-mcp
+            cd /srv/apps/superagent/superagent-qa-mcp
+
+            echo "Logging in to GitHub Container Registry..."
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+
+            echo "Pulling QA MCP image..."
+            docker pull ghcr.io/superagentv2/superagent-qa-mcp:dev
+
+            echo "Restarting QA MCP container..."
+            docker compose -p qa-mcp-dev -f docker-compose.dev.yml up -d --force-recreate
+
+            sleep 5
+
+            echo "Service status:"
+            docker compose -p qa-mcp-dev -f docker-compose.dev.yml ps
+
+            echo -e "\n=== QA MCP health ==="
+            docker exec superagent-qa-mcp-dev node -e "fetch('http://127.0.0.1:3009/health').then(async r=>{console.log(await r.text()); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})"
+
+            echo -e "\n=== QA MCP logs (last 20 lines) ==="
+            docker logs superagent-qa-mcp-dev --tail 20 2>&1 || true
+
+            echo -e "\n=== Cleaning up ==="
+            docker image prune -f 2>/dev/null || true

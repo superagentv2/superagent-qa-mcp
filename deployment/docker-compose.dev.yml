@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  qa-mcp:
+    image: ghcr.io/superagentv2/superagent-qa-mcp:dev
+    container_name: superagent-qa-mcp-dev
+    restart: always
+    ports:
+      - "3009:3009"
+    environment:
+      MCP_TRANSPORT: "http"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "3009"
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-}
+      MCP_TOKEN: ${MCP_TOKEN}
+      QA_RUNNER_URL: ${QA_RUNNER_URL:-http://host.docker.internal:8090}
+      QA_RUNNER_TOKEN: ${QA_RUNNER_TOKEN:-}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3009/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
