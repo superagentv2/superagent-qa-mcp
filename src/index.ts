@@ -10,6 +10,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { loadConfig } from "./config.js";
+import { errorMessage, logEvent, redactUrl, responseByteLength, withLogContext } from "./logger.js";
 import { QaRunnerClient } from "./qa-client.js";
 
 const config = loadConfig();
@@ -20,6 +21,46 @@ const server = new McpServer({
   name: "superagent-qa-mcp",
   version: "0.1.0",
 });
+const originalTool = server.tool.bind(server) as (...args: any[]) => unknown;
+(server as any).tool = (...args: any[]) => {
+  const callbackIndex = args.length - 1;
+  const callback = args[callbackIndex];
+  const toolName = String(args[0] ?? "unknown_tool");
+  if (typeof callback !== "function") return originalTool(...args);
+
+  args[callbackIndex] = async (...callbackArgs: any[]) => {
+    const requestId = randomUUID();
+    const started = performance.now();
+    const firstArg = callbackArgs[0];
+    const argKeys =
+      firstArg && typeof firstArg === "object" && !Array.isArray(firstArg)
+        ? Object.keys(firstArg).sort().join(",")
+        : "";
+
+    return withLogContext({ request_id: requestId, tool: toolName }, async () => {
+      logEvent("mcp_tool_start", { arg_keys: argKeys });
+      try {
+        const result = await callback(...callbackArgs);
+        const isToolError = Boolean((result as { isError?: boolean } | undefined)?.isError);
+        logEvent("mcp_tool_end", {
+          status: isToolError ? "tool_error" : "ok",
+          duration_ms: Math.round(performance.now() - started),
+          response_bytes: responseByteLength(result),
+        });
+        return result;
+      } catch (error) {
+        logEvent("mcp_tool_error", {
+          status: "exception",
+          duration_ms: Math.round(performance.now() - started),
+          error: errorMessage(error).slice(0, 1000),
+        });
+        throw error;
+      }
+    });
+  };
+
+  return originalTool(...args);
+};
 
 const boolDefault = (value: boolean) => z.boolean().default(value);
 const intDefault = (value: number, min = 1, max = 500) =>
@@ -792,6 +833,7 @@ function tokenMatches(received: string, expected: string): boolean {
 
 function requireMcpToken(req: any, res: any, next: () => void) {
   if (!config.mcpToken) {
+    logEvent("mcp_auth_error", { reason: "missing_server_token" });
     res.status(500).json({
       jsonrpc: "2.0",
       error: { code: -32603, message: "MCP_TOKEN is required for HTTP transport" },
@@ -801,6 +843,7 @@ function requireMcpToken(req: any, res: any, next: () => void) {
   }
 
   if (!tokenMatches(requestToken(req), config.mcpToken)) {
+    logEvent("mcp_auth_error", { reason: "invalid_client_token" });
     res.status(401).json({
       jsonrpc: "2.0",
       error: { code: -32001, message: "Unauthorized" },
@@ -813,6 +856,10 @@ function requireMcpToken(req: any, res: any, next: () => void) {
 }
 
 async function startStdio() {
+  logEvent("mcp_start", {
+    transport: "stdio",
+    qa_runner_url: redactUrl(config.qaRunnerUrl),
+  });
   const server = createQaMcpServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -828,6 +875,31 @@ async function startHttp() {
     allowedHosts: config.allowedHosts.length > 0 ? config.allowedHosts : undefined,
   });
   const transports: Record<string, StreamableHTTPServerTransport> = {};
+
+  logEvent("mcp_start", {
+    transport: "http",
+    host: config.httpHost,
+    port: config.httpPort,
+    allowed_hosts_count: config.allowedHosts.length,
+    qa_runner_url: redactUrl(config.qaRunnerUrl),
+  });
+
+  app.use((req: any, res: any, next: () => void) => {
+    const started = performance.now();
+    res.on("finish", () => {
+      const sessionId = Array.isArray(req.headers["mcp-session-id"])
+        ? req.headers["mcp-session-id"][0]
+        : req.headers["mcp-session-id"];
+      logEvent("mcp_http_request_end", {
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        duration_ms: Math.round(performance.now() - started),
+        session_present: Boolean(sessionId),
+      });
+    });
+    next();
+  });
 
   app.get("/health", (_req: any, res: any) => {
     res.json({
@@ -869,6 +941,11 @@ async function startHttp() {
 
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
+      logEvent("mcp_http_error", {
+        method: req.method,
+        path: req.path,
+        error: errorMessage(error).slice(0, 1000),
+      });
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: "2.0",

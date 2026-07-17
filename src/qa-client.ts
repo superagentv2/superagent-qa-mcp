@@ -1,4 +1,5 @@
 import type { QaMcpConfig } from "./config.js";
+import { errorMessage, logEvent, redactUrl } from "./logger.js";
 
 type QueryValue = string | number | boolean | undefined;
 type JsonBody = Record<string, unknown> | unknown[] | undefined;
@@ -78,16 +79,45 @@ export class QaRunnerClient {
       headers.Authorization = `Bearer ${this.config.qaRunnerToken}`;
     }
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+    const started = performance.now();
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch (error) {
+      logEvent("qa_runner_request_error", {
+        method,
+        url: redactUrl(url.toString()),
+        duration_ms: Math.round(performance.now() - started),
+        error: errorMessage(error).slice(0, 1000),
+      });
+      throw error;
+    }
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`QA runner ${response.status} ${response.statusText}: ${body}`);
+      const errorBody = await response.text();
+      logEvent("qa_runner_request_end", {
+        method,
+        url: redactUrl(url.toString()),
+        status: response.status,
+        ok: false,
+        duration_ms: Math.round(performance.now() - started),
+        response_bytes: Buffer.byteLength(errorBody),
+      });
+      throw new Error(`QA runner ${response.status} ${response.statusText}: ${errorBody}`);
     }
+
+    logEvent("qa_runner_request_end", {
+      method,
+      url: redactUrl(url.toString()),
+      status: response.status,
+      ok: true,
+      duration_ms: Math.round(performance.now() - started),
+      response_bytes: Number(response.headers.get("content-length") || 0) || undefined,
+    });
 
     return response;
   }
