@@ -17,6 +17,7 @@ from typing import Optional
 
 DEFAULT_ENV_FILE = Path("~/.config/superagent/admin-db.env").expanduser()
 READ_PREFIXES = ("select", "with", "show", "explain")
+SCHEMA_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 BLOCKED_WORDS = {
     "insert",
     "update",
@@ -99,48 +100,92 @@ def validate_read_only(sql: str) -> str:
     return compact.rstrip().rstrip(";")
 
 
-def parse_jdbc_url(jdbc_url: str) -> tuple[list[str], dict[str, str]]:
-    if not jdbc_url.startswith("jdbc:postgresql://"):
-        return [jdbc_url], {}
-    raw = "postgresql://" + jdbc_url[len("jdbc:postgresql://") :]
+def normalize_schema(schema: str) -> str:
+    value = schema.strip()
+    if not value:
+        return ""
+    if not SCHEMA_NAME_RE.match(value):
+        raise SystemExit("invalid schema name in database URL currentSchema")
+    return value
+
+
+def quote_identifier(identifier: str) -> str:
+    return f'"{normalize_schema(identifier)}"'
+
+
+def should_default_ssl(hostname: str) -> bool:
+    host = hostname.lower()
+    return bool(host) and host not in {"localhost", "127.0.0.1", "::1"}
+
+
+def clean_postgres_query(query: str) -> tuple[str, str, str]:
+    schema = ""
+    sslmode = ""
+    clean_pairs: list[tuple[str, str]] = []
+    for key, value in urllib.parse.parse_qsl(query, keep_blank_values=True):
+        key_lower = key.lower()
+        if key_lower in {"currentschema", "current_schema"}:
+            schema = normalize_schema(value)
+            continue
+        if key_lower == "sslmode":
+            sslmode = value
+        clean_pairs.append((key, value))
+    return urllib.parse.urlencode(clean_pairs), schema, sslmode
+
+
+def parse_database_url(db_url: str) -> tuple[list[str], dict[str, str], str, str]:
+    if db_url.startswith("jdbc:postgresql://"):
+        raw = "postgresql://" + db_url[len("jdbc:postgresql://") :]
+        is_jdbc = True
+    elif db_url.startswith(("postgresql://", "postgres://")):
+        raw = db_url
+        is_jdbc = False
+    else:
+        return [db_url], {}, "unknown-host", ""
+
     parsed = urllib.parse.urlparse(raw)
-    query = urllib.parse.parse_qs(parsed.query)
+    clean_query, schema, sslmode = clean_postgres_query(parsed.query)
+    hostname = parsed.hostname or ""
+    env: dict[str, str] = {}
+    if sslmode:
+        env["PGSSLMODE"] = sslmode
+    elif not os.environ.get("PGSSLMODE") and should_default_ssl(hostname):
+        env["PGSSLMODE"] = "require"
+
+    if not is_jdbc:
+        clean_url = urllib.parse.urlunparse(parsed._replace(query=clean_query))
+        return [clean_url], env, hostname or "unknown-host", schema
+
     args = [
         "-h",
-        parsed.hostname or "",
+        hostname,
         "-p",
         str(parsed.port or 5432),
         "-d",
         parsed.path.lstrip("/") or "postgres",
     ]
-    env: dict[str, str] = {}
-    schema = (query.get("currentSchema") or query.get("current_schema") or [""])[0]
-    if schema:
-        env["PGOPTIONS"] = f"-c search_path={schema}"
-    return args, env
+    return args, env, hostname or "unknown-host", schema
 
 
-def connection_args(values: dict[str, str], env_name: str) -> tuple[list[str], dict[str, str], str]:
+def connection_args(values: dict[str, str], env_name: str) -> tuple[list[str], dict[str, str], str, str]:
     database_url = env_value(values, "SUPERAGENT_DATABASE_URL", env_name)
     db_url = env_value(values, "SUPERAGENT_DB_URL", env_name)
     username = env_value(values, "SUPERAGENT_DB_USERNAME", env_name)
     password = env_value(values, "SUPERAGENT_DB_PASSWORD", env_name)
     extra_env: dict[str, str] = {}
     if database_url:
-        args, jdbc_env = parse_jdbc_url(database_url)
-        extra_env.update(jdbc_env)
-        label = urllib.parse.urlparse(args[0]).hostname if len(args) == 1 else "jdbc-host"
+        args, url_env, label, schema = parse_database_url(database_url)
+        extra_env.update(url_env)
     elif db_url:
-        args, jdbc_env = parse_jdbc_url(db_url)
-        extra_env.update(jdbc_env)
-        label = urllib.parse.urlparse("postgresql://" + db_url.removeprefix("jdbc:postgresql://")).hostname if db_url.startswith("jdbc:postgresql://") else urllib.parse.urlparse(db_url).hostname
+        args, url_env, label, schema = parse_database_url(db_url)
+        extra_env.update(url_env)
     else:
         raise SystemExit(f"missing SUPERAGENT_DATABASE_URL_{env_name.upper()} or SUPERAGENT_DB_URL_{env_name.upper()}")
     if username:
         extra_env["PGUSER"] = username
     if password:
         extra_env["PGPASSWORD"] = password
-    return args, extra_env, label or "unknown-host"
+    return args, extra_env, label or "unknown-host", schema
 
 
 def main() -> int:
@@ -161,9 +206,10 @@ def main() -> int:
     env_name = normalize_env(args.env, values)
     sql = args.sql if args.sql else args.file.read_text(encoding="utf-8")
     safe_sql = validate_read_only(sql)
-    conn_args, extra_env, host_label = connection_args(values, env_name)
+    conn_args, extra_env, host_label, schema = connection_args(values, env_name)
 
-    wrapped = f"begin transaction read only;\n{safe_sql};\ncommit;\n"
+    schema_sql = f"set local search_path to {quote_identifier(schema)};\n" if schema else ""
+    wrapped = f"begin transaction read only;\n{schema_sql}{safe_sql};\ncommit;\n"
     cmd = ["psql", "--no-psqlrc", "--set", "ON_ERROR_STOP=1", *conn_args]
     if args.csv:
         cmd.append("--csv")

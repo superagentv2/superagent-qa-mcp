@@ -47,6 +47,21 @@ SUPERAGENT_DB_PASSWORD_PROD=
 If the team provides Spring-style JDBC values, use `SUPERAGENT_DB_URL_<ENV>` as
 `jdbc:postgresql://...` plus username/password variables.
 
+DEV and staging may point at the same physical Postgres database and select
+different SuperAgent schemas through the URL query parameter:
+
+```text
+?currentSchema=superagent_dev_schema
+?currentSchema=superagent_staging_schema
+```
+
+The bundled DB helper removes `currentSchema` from the connection URL and
+applies it inside the read-only transaction with `SET LOCAL search_path`. This
+avoids relying on Postgres startup options that some managed servers reject.
+
+Managed Postgres hosts normally require SSL. The helper respects `sslmode=` in
+the URL and otherwise defaults `PGSSLMODE=require` for non-local hosts.
+
 `SUPERAGENT_ADMIN_BEARER_TOKEN_<ENV>` is optional. Admin voice-session endpoints
 may require a Clerk/JWT bearer token in addition to `X-API-KEY`; trace endpoints
 may work with the backend API key alone depending on environment policy.

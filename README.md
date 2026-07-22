@@ -316,6 +316,11 @@ provides Spring/JDBC values instead, use `SUPERAGENT_DB_URL_<ENV>` as
 `jdbc:postgresql://...` plus `SUPERAGENT_DB_USERNAME_<ENV>` and
 `SUPERAGENT_DB_PASSWORD_<ENV>`.
 
+DEV and staging can use the same physical database with different schemas, for
+example `?currentSchema=superagent_dev_schema` and
+`?currentSchema=superagent_staging_schema`. The helper applies that schema
+inside a read-only transaction and defaults SSL on for non-local database hosts.
+
 Optional staging/prod credentials can use the same suffix pattern:
 
 ```text
