@@ -1,7 +1,7 @@
 {
   "name": "superagent-qa",
-  "version": "0.1.0",
-  "description": "Codex plugin for SuperAgent automation QA workflows.",
+  "version": "0.1.1",
+  "description": "Codex plugin for SuperAgent automation QA, admin debug, and database inspection workflows.",
   "author": {
     "name": "SuperAgent",
     "email": "engineering@superagent.estate",
@@ -10,13 +10,13 @@
   "homepage": "https://github.com/superagentv2/superagent-qa-mcp",
   "repository": "https://github.com/superagentv2/superagent-qa-mcp",
   "license": "UNLICENSED",
-  "keywords": ["superagent", "qa", "automation", "mcp", "codex"],
+  "keywords": ["superagent", "qa", "automation", "mcp", "codex", "database", "debug"],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "SuperAgent QA",
-    "shortDescription": "Manage and run SuperAgent automation QA through Codex.",
-    "longDescription": "SuperAgent QA gives Codex an MCP-backed control surface and operating guide for inspecting manifests, understanding test definitions, managing lifecycle, editing QA files, linting, running tests, and reading run history for SuperAgent automation QA.",
+    "shortDescription": "Manage SuperAgent QA, call debug, and database inspection through Codex.",
+    "longDescription": "SuperAgent QA gives Codex an MCP-backed control surface and operating guides for inspecting manifests, understanding test definitions, managing lifecycle, editing QA files, linting, running tests, reading run history, exporting voice-call admin debug evidence, and safely inspecting SuperAgent database state.",
     "developerName": "SuperAgent",
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Write"],
@@ -24,7 +24,7 @@
     "defaultPrompt": [
       "Inspect the SuperAgent QA catalog.",
       "Generate a SuperAgent QA draft test.",
-      "Run and triage a SuperAgent QA test."
+      "Inspect a SuperAgent room trace."
     ],
     "brandColor": "#15803D"
   }

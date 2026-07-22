@@ -1,0 +1,4 @@
+interface:
+  display_name: "SuperAgent Admin DB"
+  short_description: "Safe SuperAgent DB and admin-debug inspection"
+  default_prompt: "Use $superagent-admin-db to inspect SuperAgent database state and voice-call admin debug evidence safely with local credentials and redacted output."

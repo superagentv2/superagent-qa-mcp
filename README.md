@@ -128,6 +128,8 @@ The plugin installs:
 - The hosted SuperAgent QA MCP config.
 - A concise `superagent-auto-qa` skill that explains the QA automation system
   and tells Codex how to use the MCP safely.
+- A `superagent-admin-db` skill for read-only SuperAgent database inspection
+  and admin debug evidence export from room/debug links.
 
 The plugin does not include secrets. Admin users provide only `MCP_TOKEN`.
 `QA_RUNNER_TOKEN` stays in the hosted MCP environment.
@@ -277,11 +279,66 @@ Use this update flow when any of these files change:
 .codex-plugin/plugin.json
 .mcp.json
 .agents/plugins/marketplace.json
-skills/superagent-auto-qa/
+skills/
 ```
 
 If only `MCP_TOKEN` changes, update the local environment variable and restart
 Codex. No plugin reinstall is needed.
+
+### Configure SuperAgent Admin DB Credentials
+
+The `superagent-admin-db` skill does not include credentials. QA users who need
+database or admin-debug access should create a local env file:
+
+```bash
+mkdir -p ~/.config/superagent
+nano ~/.config/superagent/admin-db.env
+chmod 600 ~/.config/superagent/admin-db.env
+```
+
+Populate it with the values supplied by the SuperAgent team:
+
+```env
+SUPERAGENT_DEFAULT_ENV=dev
+
+SUPERAGENT_BACKEND_URL_DEV=https://back-dev.superagent.estate/api
+SUPERAGENT_BACKEND_API_KEY_DEV=
+SUPERAGENT_ADMIN_BEARER_TOKEN_DEV=
+
+SUPERAGENT_DATABASE_URL_DEV=
+SUPERAGENT_DB_URL_DEV=
+SUPERAGENT_DB_USERNAME_DEV=
+SUPERAGENT_DB_PASSWORD_DEV=
+```
+
+Use `SUPERAGENT_DATABASE_URL_<ENV>` for a `postgresql://` URL. If the team
+provides Spring/JDBC values instead, use `SUPERAGENT_DB_URL_<ENV>` as
+`jdbc:postgresql://...` plus `SUPERAGENT_DB_USERNAME_<ENV>` and
+`SUPERAGENT_DB_PASSWORD_<ENV>`.
+
+Optional staging/prod credentials can use the same suffix pattern:
+
+```text
+SUPERAGENT_BACKEND_URL_STAGING
+SUPERAGENT_BACKEND_API_KEY_STAGING
+SUPERAGENT_ADMIN_BEARER_TOKEN_STAGING
+SUPERAGENT_DATABASE_URL_STAGING
+SUPERAGENT_DB_URL_STAGING
+SUPERAGENT_DB_USERNAME_STAGING
+SUPERAGENT_DB_PASSWORD_STAGING
+
+SUPERAGENT_BACKEND_URL_PROD
+SUPERAGENT_BACKEND_API_KEY_PROD
+SUPERAGENT_ADMIN_BEARER_TOKEN_PROD
+SUPERAGENT_DATABASE_URL_PROD
+SUPERAGENT_DB_URL_PROD
+SUPERAGENT_DB_USERNAME_PROD
+SUPERAGENT_DB_PASSWORD_PROD
+```
+
+Do not commit this file. Do not paste database URLs, API keys, bearer tokens, or
+passwords into Codex chat, Jira, docs, or reports. The bundled scripts parse the
+file as inert dotenv text; do not `source` it.
 
 For DEV testing, `.mcp.json` currently points at:
 
