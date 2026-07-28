@@ -70,6 +70,19 @@ not only from folder names.
 - **Microtest**: resumes from a snapshot JSON, injects turns, and asserts a
   narrow behavior.
 
+## QA AI Provider Policy
+
+For every new or edited QA test definition, set:
+
+```yaml
+ai_provider: codex
+```
+
+`codex` was built specifically for QA tests and is the mandatory default. Use
+`ai_provider: live` only when the user explicitly requests the Live API path.
+Never omit the key when authoring QA tests: an omitted value uses the backend's
+Live API default. `openai` is not a valid QA test value.
+
 ## Common Workflows
 
 **Author or generate a test**

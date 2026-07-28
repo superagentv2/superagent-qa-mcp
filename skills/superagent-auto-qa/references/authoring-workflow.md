@@ -89,6 +89,9 @@ Ensure new tests include useful metadata:
   etc. when QA should see `priority: X` in catalog and run views. Legacy
   `p0`/`p1` values are tolerated but ignored by that display.
 - `covers`: requirement IDs from `docs/evaluation/requirements.yaml`
+- `ai_provider`: set `codex` for every new or edited QA test. Use `live` only
+  when the user explicitly requests the Live API path; do not omit the field,
+  because omission selects the backend's Live API default.
 
 These values feed catalog search/filtering and the right-side context rail.
 
@@ -106,7 +109,8 @@ summary: Purchase new init collects listing/address, financing, dump, then initi
 ```
 
 Optional fields include `priority`, `required_evidence`, `legacy_status`,
-`automated_protection`, `next_action`, and `labels`.
+`detailed_description`, `next_action`, and `labels`. `detailed_description`
+is narrative requirement context only; it does not establish coverage.
 
 Tests claim coverage with top-level `covers`:
 
@@ -124,6 +128,9 @@ requirements, test claims, and latest run evidence:
 - `failing`: linked latest run evidence failed;
 - `partial`: not all required evidence types pass;
 - `covered`: required evidence is satisfied by passing linked runs.
+
+Only test `covers` claims and their linked run evidence determine coverage;
+requirement narrative is not coverage evidence.
 
 Do not edit `legacy_status` to fake coverage. It is historical context from the
 old matrix and does not drive computed status.
@@ -209,11 +216,12 @@ coverage tags, and stale/malformed YAML.
 3. Use manifest field names in `field_data`, `expected_fields`, and
    `forbidden_fields`.
 4. Pick a stable deterministic oracle.
-5. Add readable `title`/`notes`, taxonomy, and `covers` where known.
-6. Save as `qa_status: draft`.
-7. Lint before review.
-8. Run the narrowest useful proof.
-9. Promote only after human/Codex review.
+5. Set `ai_provider: codex` unless the user explicitly requests `live`.
+6. Add readable `title`/`notes`, taxonomy, and `covers` where known.
+7. Save as `qa_status: draft`.
+8. Lint before review.
+9. Run the narrowest useful proof.
+10. Promote only after human/Codex review.
 
 ## CRUD And Linking Checklist
 

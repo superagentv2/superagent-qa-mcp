@@ -105,7 +105,7 @@ sections:
         required_evidence:
           - test_type: replay
         legacy_status: Covered
-        automated_protection: Cash and financed purchase replays.
+        detailed_description: Purchase initialization must collect listing/address, financing, and dump details before initialization.
         next_action: Add mind-change case.
         labels: [init, purchase]
 ```
@@ -121,7 +121,7 @@ Optional requirement fields:
 - `priority`;
 - `required_evidence`, with entries such as `{test_type: replay}`;
 - `legacy_status`, retained from the old matrix as context only;
-- `automated_protection`;
+- `detailed_description`, narrative requirement context only;
 - `next_action`;
 - `labels`.
 
@@ -138,6 +138,9 @@ covers:
 The coverage graph joins `covers` entries to requirement ids. Unknown ids appear
 under `unknown_covers`. Tests without `covers` appear under
 `tests_without_covers` and do not protect any requirement.
+
+`detailed_description` does not establish coverage. Coverage is determined by
+test `covers` claims and the linked run evidence.
 
 Computed statuses:
 

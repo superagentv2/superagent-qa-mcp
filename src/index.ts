@@ -87,12 +87,12 @@ const suiteRunOptionsSchema = {
 const requirementSchema = z.object({
   id: z.string(),
   summary: z.string(),
+  detailed_description: z.string().optional(),
   section_id: z.string().optional(),
   section_title: z.string().optional(),
   priority: z.string().default("p1"),
   required_evidence: z.array(z.object({ test_type: z.string() })).optional(),
   legacy_status: z.string().optional(),
-  automated_protection: z.string().optional(),
   next_action: z.string().optional(),
   labels: z.array(z.string()).optional(),
 });

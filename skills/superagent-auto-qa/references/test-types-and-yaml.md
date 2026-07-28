@@ -53,12 +53,18 @@ area: [cross-flow]
 kind: [voice-simulation]
 priority: 1
 covers: [PUR-NEW-002]
+ai_provider: codex
 ```
 
 `qa_status` powers lifecycle. `area`, `kind`, `priority`, and `covers` power
 catalog filtering/search and side-panel context. Numeric test priorities are
 displayed as `priority: X` in the admin catalog and run views. Legacy values
 such as `p0`/`p1` are tolerated but ignored by that display.
+
+`ai_provider: codex` is mandatory for new and edited QA tests. It uses the
+QA-specific Codex extraction path. Use `ai_provider: live` only when the user
+explicitly requests the Live API path. Do not omit the field: omission selects
+the backend's Live API default. `openai` is not a valid value.
 
 ## Replay Regression YAML
 
@@ -76,6 +82,7 @@ notes: What this scenario protects.
 contract_type: purchase
 mode: New
 mode_style: fast
+ai_provider: codex
 user_id: user_qa_draft
 is_guest: false
 tier: 3
@@ -121,6 +128,7 @@ covers: [PUR-NEW-002]
 contract_type: purchase
 mode: New
 mode_style: fast
+ai_provider: codex
 user_id: user_qa_draft
 init_transcript:
   - "user: Cash purchase for 700,000 dollars."
@@ -149,6 +157,7 @@ notes: Resume after addendum routing and verify no repeated question.
 area: [addenda]
 kind: [micro]
 priority: 1
+ai_provider: codex
 snapshot: snapshots/example-state.json
 user_turns:
   - "Yes, add that addendum."
