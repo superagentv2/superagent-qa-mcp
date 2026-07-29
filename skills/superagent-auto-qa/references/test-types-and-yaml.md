@@ -112,6 +112,15 @@ max_turns: 60
 Use `user_mode: simulated` unless exact phrasing matters. Use `user_mode:
 replay` only for literal transcript/utterance-sensitive paths.
 
+A replay starts a conversation and does not require a snapshot. Use a
+micro-test instead when the test must resume from a known mid-call state.
+
+Do not assume that adding `fake_backend` to replay YAML activates offline
+execution. In the current hosted MCP/UI execution path, replays use the real
+backend; fake-backend configuration is consumed only when the runner is
+explicitly started in offline mode. Treat real backend writes and queued
+external actions as intentional side effects when reviewing a replay.
+
 ## Extraction Fixture YAML
 
 Schema source: `core/testing/extraction_scenario.py::ExtractionScenario`.
@@ -182,6 +191,11 @@ Use:
 - `bug_signature` for semantic behavior checks.
 - extraction `expected_fields` and `expected_newly_captured` for extraction.
 - tool-call assertions when the behavior is observable as a tool call.
+
+For voice-focused replays, prefer stable observable evidence: required tool
+invocation, agent acknowledgement, phase transition, and terminal call
+behavior. Do not assert external provider delivery unless delivery itself is
+the behavior under test.
 
 Do not weaken assertions to make a run pass. If product behavior is correct,
 update the test with notes. If product behavior is wrong, keep the test strict.

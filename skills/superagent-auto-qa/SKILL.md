@@ -129,6 +129,11 @@ requirement tools use the runner's `include_coverage=false` mode by default, so
 they should not be followed by `qa_coverage_get` unless the user specifically
 needs refreshed coverage.
 
+`covers` is optional to the YAML schema but expected on authored tests that
+protect registered requirements. Refresh the hosted requirements first, use
+exact requirement IDs, and claim only behavior that the test's assertions
+actually prove. A full-flow replay may cover multiple requirements.
+
 ## Safety Rules
 
 - Never promote generated YAML without human review.
@@ -145,8 +150,9 @@ Load only the reference needed:
 
 - `references/test-types-and-yaml.md`: YAML shape, metadata, snapshots,
   assertions, and test-type differences.
-- `references/authoring-workflow.md`: authoring, generation, review,
-  promotion, and anti-patterns.
+- `references/authoring-workflow.md`: authoring without codebase access,
+  replay backend/side-effect policy, generation, review, promotion, and
+  anti-patterns.
 - `references/admin-ui-contract.md`: admin QA UI/API semantics, catalog,
   filters, CRUD, lifecycle, and explorer behavior.
 - `references/runbook.md`: running tests, artifacts, runner activation, and

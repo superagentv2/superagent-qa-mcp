@@ -9,6 +9,51 @@
 - Use suite/profile when running an existing batch, not when authoring one new
   behavior.
 
+## Author Without Codebase Access
+
+The hosted MCP should be sufficient for normal test authoring:
+
+1. Fetch health, manifest, hosted documentation, requirements, and focused
+   catalog examples.
+2. Take required YAML keys and valid fields, tools, values, assertions, user
+   modes, and lifecycle states from those hosted contracts.
+3. Supply synthetic test-user data manually when the runner requires it.
+4. If an optional internal detail is ambiguous, omit it. Assert another stable,
+   observable signal instead of inventing a field, tool, or assertion.
+5. Inspect the application code only when the hosted contracts cannot establish
+   behavior that is essential to the test and no equivalent oracle exists.
+
+Examples of alternative evidence include captured fields, phase transitions,
+known tool calls, agent speech intent, and terminal call behavior.
+
+## Replay Backend And Side Effects
+
+Current hosted MCP/UI replay execution uses the real backend. A `fake_backend`
+mapping in YAML supplies fake responses only when the runner is explicitly
+started in offline mode; it does not switch a normal hosted replay offline.
+
+Before running a side-effecting replay:
+
+- Establish whether real backend writes and queued actions are accepted.
+- Use unique synthetic identities, addresses, and recipient emails. Use a
+  designated test mailbox or a non-personal placeholder accepted by backend
+  validation; never use a real person's address.
+- Keep assertions aligned with scope. A voice-only test should verify voice,
+  state, and tool orchestration rather than external provider delivery.
+- For a fire-and-forget action, treat successful queueing/acceptance as the
+  synchronous behavior. Do not wait for or assert eventual delivery unless
+  delivery is explicitly in scope.
+
+For the current send-for-signature voice flow, first verify the exact tool names
+through the manifest. The stable terminal sequence is:
+
+1. Require explicit user confirmation before `confirm_and_send_signature`.
+2. Assert that the tool is called after confirmation.
+3. Assert an immediate sending/queued acknowledgement and the question asking
+   whether the user wants to hang up.
+4. If the user agrees, assert `end_call`.
+5. Do not use delivery-provider success as the oracle for a voice-only replay.
+
 ## Manifest Grounding
 
 Before generating or hand-authoring YAML:
@@ -120,6 +165,12 @@ covers:
   - PUR-NEW-003
 ```
 
+The key is optional to YAML execution but operationally expected whenever a
+test protects a registered requirement. Fetch the current hosted requirements,
+use exact IDs, and include only requirements that the test's assertions prove.
+Broad happy-path replays may list multiple requirements, but completing a flow
+does not automatically prove every requirement in that flow.
+
 Coverage status is computed by `scripts/qa_coverage_system.py` from
 requirements, test claims, and latest run evidence:
 
@@ -217,7 +268,8 @@ coverage tags, and stale/malformed YAML.
    `forbidden_fields`.
 4. Pick a stable deterministic oracle.
 5. Set `ai_provider: codex` unless the user explicitly requests `live`.
-6. Add readable `title`/`notes`, taxonomy, and `covers` where known.
+6. Add readable `title`/`notes`, taxonomy, and exact registered `covers` for
+   every requirement the test proves.
 7. Save as `qa_status: draft`.
 8. Lint before review.
 9. Run the narrowest useful proof.
