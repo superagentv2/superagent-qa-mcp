@@ -229,6 +229,67 @@ Use:
 - extraction `expected_fields` and `expected_newly_captured` for extraction.
 - tool-call assertions when the behavior is observable as a tool call.
 
+### Per-assertion pass rates
+
+Use optional `min_pass_rate` when one assertion may tolerate occasional
+variation across repeated runs. Configure the run count when launching the test
+or adding it to a playlist. The threshold does not make the test repeat by
+itself.
+
+- The default is `1.0`: the assertion must pass every run.
+- Use an unquoted number greater than `0` and at most `1`.
+- Each assertion is evaluated independently. The test passes only when every
+  assertion reaches its own threshold.
+- Required passes are rounded up. With five runs, `0.8` requires four passes.
+- Missing, failed, and `not_reached` results count as failed attempts.
+- With one run, every valid threshold still requires one pass.
+
+Place the key at the assertion entry for timeline assertions and bug
+signatures:
+
+```yaml
+timeline_assertions:
+  - id: review-follows-request
+    min_pass_rate: 1.0
+    after:
+      event: user_said
+      contains: send for review
+    expect:
+      event: agent_said
+      contains: sent for review
+
+bug_signature:
+  - id: review-tool-used
+    kind: tool_called
+    name: send_for_review
+    min_pass_rate: 0.8
+```
+
+For field assertions, place it inside the field expectation:
+
+```yaml
+expected_fields:
+  buyer1_name:
+    equals: Avery Morgan
+    min_pass_rate: 1.0
+```
+
+The same shape applies to `forbidden_fields` and
+`expected_prefilled_fields`. For an extraction turn, place it beside
+`expected_newly_captured` and provide a stable `assertion_id`:
+
+```yaml
+extract_turns:
+  - segments:
+      - "user: The buyer is Avery Morgan."
+    expected_newly_captured: [buyer1_name]
+    assertion_id: buyer-name-captured
+    min_pass_rate: 0.8
+```
+
+Give authored `bug_signature` entries an `id` when using thresholds. Field
+assertion IDs are derived from their field names.
+
 ### Timeline assertion contract
 
 Timeline assertions run during replay and microtests. They observe the

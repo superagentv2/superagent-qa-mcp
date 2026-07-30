@@ -151,6 +151,21 @@ protect registered requirements. Refresh the hosted requirements first, use
 exact requirement IDs, and claim only behavior that the test's assertions
 actually prove. A full-flow replay may cover multiple requirements.
 
+## Assertion Pass-Rate Policy
+
+Use optional `min_pass_rate` on an individual timeline or final assertion when
+repeated runs may tolerate limited variation. It defaults to `1.0` and must be
+an unquoted number greater than `0` and at most `1`. The launch or playlist
+configuration controls how many times the test runs; `min_pass_rate` controls
+how many of those attempts that assertion must pass.
+
+Apply it at the assertion entry for `timeline_assertions` and `bug_signature`,
+inside a field expectation for `expected_fields`, `forbidden_fields`, or
+`expected_prefilled_fields`, and on an `extract_turns` entry that has
+`expected_newly_captured`. Give authored `bug_signature` entries an `id`, and
+give thresholded extraction-turn assertions an `assertion_id`, so results have
+stable names across runs. See `references/test-types-and-yaml.md` for examples.
+
 ## Safety Rules
 
 - Never promote generated YAML without human review.
