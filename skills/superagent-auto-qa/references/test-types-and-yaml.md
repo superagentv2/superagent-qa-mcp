@@ -103,6 +103,15 @@ bug_signature:
     field: purchase_price
     matches_questions:
       - purchase price
+timeline_assertions:
+  - id: price-not-reasked-after-capture
+    description: The agent does not ask for purchase price after it is captured
+    after:
+      event: field_captured
+      field: purchase_price
+    forbid:
+      event: agent_said
+      contains: purchase price
 expected_fields:
   purchase_price:
     equals: 700000
@@ -175,6 +184,15 @@ bug_signature:
     field: seller_compensation
     matches_questions:
       - seller compensation
+timeline_assertions:
+  - id: no-reask-after-answer
+    description: Seller compensation is not requested again after the answer
+    after:
+      event: user_said
+      contains: add that addendum
+    forbid:
+      event: agent_said
+      contains: seller compensation
 fake_backend: {}
 ```
 
@@ -189,8 +207,49 @@ Use:
 
 - `expected_fields` / `forbidden_fields` for backend field-state gates.
 - `bug_signature` for semantic behavior checks.
+- `timeline_assertions` when ordering matters or the same evidence may appear
+  elsewhere in the conversation.
 - extraction `expected_fields` and `expected_newly_captured` for extraction.
 - tool-call assertions when the behavior is observable as a tool call.
+
+### Timeline assertion contract
+
+Timeline assertions run during replay and microtests. They observe the
+conversation but never steer the voice agent or test user.
+
+```yaml
+timeline_assertions:
+  - id: end-call-after-confirmation
+    description: end_call follows the agent's hang-up prompt
+    after:
+      event: agent_said
+      contains: hang up
+    expect:
+      event: tool_called
+      name: end_call
+    before:
+      event: call_ended
+```
+
+- `after` is required and arms the assertion.
+- Exactly one of `expect` or `forbid` is required.
+- `before` is optional; call end is the default boundary.
+- `trigger_required` defaults to `true`. If the trigger is never observed, the
+  assertion becomes `not_reached` and the test fails. Set it to `false` only
+  when absence of that entire branch is acceptable.
+- Runtime states are `waiting`, `armed`, `passed`, `failed`, and `not_reached`.
+- Supported events: `user_said`, `agent_said`, `tool_called`,
+  `field_captured`, `trace_event`, `agent_handoff`, `call_ended`.
+- Matchers may use `contains`, `equals`, `name`, `field`, `turn`,
+  `with_arguments`, and nested `details`.
+
+Use `before: {event: user_said}` when an expected response must occur before
+the next caller turn. Omit `before` for a prohibition that should remain active
+until the call ends.
+
+The replay executor will not inject another simulated caller turn when the
+assistant has produced no correlated response. That condition fails the run as
+a harness timing/error instead of manufacturing two consecutive caller turns.
 
 For voice-focused replays, prefer stable observable evidence: required tool
 invocation, agent acknowledgement, phase transition, and terminal call
