@@ -321,6 +321,60 @@ timeline_assertions:
 - Matchers may use `contains`, `equals`, `name`, `field`, `turn`,
   `with_arguments`, and nested `details`.
 
+#### Matching semantics
+
+All populated matcher keys are AND conditions.
+
+- `event` is an exact canonical event-type match.
+- `contains` is a case-insensitive substring of the event label.
+- `equals` is a case-insensitive complete-label match.
+- `name` is a case-insensitive exact match against `details.name`, falling
+  back to the label.
+- `field` is an exact, case-sensitive match against `details.field` or a member
+  of `details.fields`.
+- `with_arguments` is a recursive subset of `details.arguments`.
+- `details` is a recursive subset of the event details. Supplied scalar and
+  list values compare exactly and case-sensitively.
+
+There is no regex, implicit OR, fuzzy matching, or semantic paraphrase
+matching. Use stable non-speech evidence when exact wording is not guaranteed.
+
+#### Temporal semantics
+
+The event matching `after` only arms the assertion; it cannot satisfy its own
+`expect`, `forbid`, or `before`. Observation begins on the next emitted event.
+An armed assertion does not reset when the trigger appears again.
+
+On later events, evidence is evaluated before the boundary, so `expect` or
+`forbid` wins when the same event also matches `before`. Passing and failing are
+terminal, and assertions never stop or steer the conversation.
+
+An armed expectation passes on evidence, fails when `before` arrives first, or
+fails at call finalization if it is still armed. A missing required trigger is
+`not_reached`; a missing optional trigger passes.
+
+#### `forbid` lifecycle
+
+Events before `after` are irrelevant to a prohibition. Once armed, matching
+`forbid` fails immediately. Reaching `before` without that evidence passes.
+Without `before`, it stays armed until finalization and then passes only if the
+forbidden event never appeared.
+
+A missing required trigger is `not_reached`, not a pass. Use
+`trigger_required: false` only when absence of the entire branch is acceptable.
+
+#### Turn matching
+
+`turn` is an exact absolute integer filter. The initial greeting is turn `0`.
+The first injected user message is turn `1`, and canonical events emitted while
+processing that message—including agent speech, tools, extraction/trace
+events, handoffs, and call end—share turn `1`. Multiple agent messages may
+therefore share a turn.
+
+`turn: 3` means “emitted during conversation turn 3,” not “the third matching
+event” or “three turns after the trigger.” Prefer event-driven triggers unless
+the test intentionally fixes the turn layout.
+
 Use `before: {event: user_said}` when an expected response must occur before
 the next caller turn. Omit `before` for a prohibition that should remain active
 until the call ends.
