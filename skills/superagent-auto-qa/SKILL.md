@@ -70,6 +70,23 @@ not only from folder names.
 - **Microtest**: resumes from a snapshot JSON, injects turns, and asserts a
   narrow behavior.
 
+### Replay User Driver Policy
+
+Default authored replays to:
+
+```yaml
+user_mode: simulated
+```
+
+Simulated mode gives the caller LLM the scenario `goal`, `field_data`, and each
+intent's `intent` name plus `original_line` as semantic conversation hints. It
+does not expose `matches_questions` to that LLM. The hints guide what the caller
+should communicate when relevant; they are not an ordered or literal script.
+
+Use `user_mode: replay` only when exact caller wording or matcher-anchored
+sequencing is itself required by the test. Literal replay consumes
+`matches_questions` to select an intent and emits its `original_line` verbatim.
+
 ## QA AI Provider Policy
 
 For every new or edited QA test definition, set:

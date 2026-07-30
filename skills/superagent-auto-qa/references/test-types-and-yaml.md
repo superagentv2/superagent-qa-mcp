@@ -88,6 +88,7 @@ is_guest: false
 tier: 3
 user_mode: simulated
 user_style: natural
+goal: Create a purchase contract and answer the assistant naturally.
 area: [cross-flow]
 kind: [voice-simulation]
 priority: 1
@@ -97,7 +98,6 @@ field_data:
 intents:
   - intent: provide_purchase_price
     original_line: The purchase price is 700,000 dollars.
-    matches_questions: []
 bug_signature:
   - kind: agent_did_not_ask_answered_field
     field: purchase_price
@@ -120,6 +120,23 @@ max_turns: 60
 
 Use `user_mode: simulated` unless exact phrasing matters. Use `user_mode:
 replay` only for literal transcript/utterance-sensitive paths.
+
+In simulated mode:
+
+- `goal` is the caller's primary objective.
+- `field_data` is the caller's authoritative source of factual values.
+- Every intent's `intent` name and `original_line` are appended to the goal as
+  semantic conversation hints, even when the YAML already provides an explicit
+  `goal`.
+- Intent hints are not an ordered script. The caller should use them only when
+  contextually relevant, avoid forcing them into unrelated turns, and avoid
+  repeating information already communicated.
+- `matches_questions` is never provided to the simulated-user LLM.
+
+In literal replay mode, the executor uses `matches_questions` to select an
+intent and emits its `original_line` verbatim. Include matcher phrases only
+when `user_mode: replay` needs them; omit them from simulated-mode definitions
+unless the same fixture intentionally supports literal replay as well.
 
 A replay starts a conversation and does not require a snapshot. Use a
 micro-test instead when the test must resume from a known mid-call state.

@@ -9,6 +9,27 @@
 - Use suite/profile when running an existing batch, not when authoring one new
   behavior.
 
+## Choose Replay User Mode
+
+Prefer `user_mode: simulated`. It lets the caller answer the conversation that
+actually occurs instead of depending on brittle question substrings.
+
+For simulated mode, author:
+
+- `goal` for the caller's overall objective;
+- `field_data` for authoritative values;
+- optional intents whose `intent` name explains the purpose and whose
+  `original_line` supplies example information to communicate.
+
+The executor supplies both an explicit goal and those intent hints to the
+simulated-user LLM. It never supplies `matches_questions`. Do not expect intent
+order or exact wording to control a simulated conversation.
+
+Use `user_mode: replay` only when exact caller wording or matcher-anchored
+sequencing is part of the behavior under test. In that mode,
+`matches_questions` selects the next intent and `original_line` is emitted
+verbatim.
+
 ## Author Without Codebase Access
 
 The hosted MCP should be sufficient for normal test authoring:
@@ -196,6 +217,8 @@ under unknown covers.
 - Do not create a test with no oracle.
 - Do not invent field names outside the manifest.
 - Do not use literal replay when simulated mode would be more stable.
+- Do not use `matches_questions` to steer simulated mode; the simulated-user
+  LLM never receives them.
 - Do not promote generated YAML without review.
 - Do not treat `claimed` as `covered`; run evidence must support the claim.
 - Do not relax `bug_signature` or expected fields just to get a pass.
@@ -263,17 +286,19 @@ coverage tags, and stale/malformed YAML.
 ## Hand-Authoring Checklist
 
 1. Choose `test_type` from the behavior being tested, not the target folder.
-2. Fetch the manifest and select a valid `contract_type`.
-3. Use manifest field names in `field_data`, `expected_fields`, and
+2. For a replay, default to `user_mode: simulated`; use literal replay only
+   when exact wording or matcher-anchored sequencing is essential.
+3. Fetch the manifest and select a valid `contract_type`.
+4. Use manifest field names in `field_data`, `expected_fields`, and
    `forbidden_fields`.
-4. Pick a stable deterministic oracle.
-5. Set `ai_provider: codex` unless the user explicitly requests `live`.
-6. Add readable `title`/`notes`, taxonomy, and exact registered `covers` for
+5. Pick a stable deterministic oracle.
+6. Set `ai_provider: codex` unless the user explicitly requests `live`.
+7. Add readable `title`/`notes`, taxonomy, and exact registered `covers` for
    every requirement the test proves.
-7. Save as `qa_status: draft`.
-8. Lint before review.
-9. Run the narrowest useful proof.
-10. Promote only after human/Codex review.
+8. Save as `qa_status: draft`.
+9. Lint before review.
+10. Run the narrowest useful proof.
+11. Promote only after human/Codex review.
 
 ## CRUD And Linking Checklist
 
