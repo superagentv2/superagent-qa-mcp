@@ -290,6 +290,37 @@ extract_turns:
 Give authored `bug_signature` entries an `id` when using thresholds. Field
 assertion IDs are derived from their field names.
 
+### Advisory assertions
+
+Every assertion defaults to `blocking: true`. Set `blocking: false` when the
+assertion should remain visible and measurable but must not determine the final
+test or reliability-gate result:
+
+```yaml
+timeline_assertions:
+  - id: summary-mentions-market-area
+    blocking: false
+    after:
+      event: user_said
+      contains: summary
+    expect:
+      event: agent_said
+      contains: Maricopa County
+
+expected_fields:
+  optional_summary_label:
+    equals: Market area
+    blocking: false
+```
+
+The key must be an unquoted boolean. It is supported on `timeline_assertions`
+and `bug_signature` entries; inside `expected_fields`, `forbidden_fields`, and
+`expected_prefilled_fields` expectations; and on an `extract_turns` entry that
+defines `expected_newly_captured`. A failed advisory is persisted as failed and
+its repeated-run threshold is still calculated, but neither failure gates the
+outcome. Keep at least one blocking deterministic oracle in reviewed and
+promoted tests.
+
 ### Timeline assertion contract
 
 Timeline assertions run during replay and microtests. They observe the

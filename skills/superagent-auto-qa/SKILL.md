@@ -166,6 +166,20 @@ inside a field expectation for `expected_fields`, `forbidden_fields`, or
 give thresholded extraction-turn assertions an `assertion_id`, so results have
 stable names across runs. See `references/test-types-and-yaml.md` for examples.
 
+## Advisory Assertion Policy
+
+Assertions are blocking by default. Use `blocking: false` only when the user
+explicitly wants an observation recorded without letting its failure decide the
+test outcome. Advisory assertions still run, appear in artifacts and Run Studio,
+and retain their per-run and repeated-run pass rates.
+
+The key is supported on `timeline_assertions` and `bug_signature` entries;
+inside `expected_fields`, `forbidden_fields`, and
+`expected_prefilled_fields` expectations; and on an `extract_turns` entry with
+`expected_newly_captured`. It must be an unquoted boolean. Keep at least one
+blocking deterministic oracle in every reviewed or promoted test. Never change
+an assertion to advisory merely to obtain a passing result.
+
 ## Safety Rules
 
 - Never promote generated YAML without human review.
