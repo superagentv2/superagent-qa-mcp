@@ -90,6 +90,46 @@ Before generating or hand-authoring YAML:
 The admin generator is intentionally not a generic LLM call. It builds a
 manifest-grounded plan, compiles YAML, and lints before saving.
 
+## Contract-Grounded Field Authoring
+
+For replay or extraction tests that assert contract fields, use three evidence
+sources before drafting: the manifest, the database, and one calibration run.
+
+1. Fetch the manifest for the supported contract type, field names, value
+   vocabularies, tools, and assertion syntax.
+2. Load `../../superagent-admin-db/SKILL.md` and follow its read-only workflow.
+   Verify the target environment and schema, then inspect only the active
+   published template, its field configuration, and prefills relevant to the
+   selected test user.
+3. Build a small internal ledger before writing YAML:
+
+   | Field | Schema/type | Initial source or value | Expected turn delta | Final matcher |
+   | --- | --- | --- | --- | --- |
+   | `field_name` | manifest evidence | absent, template, or user prefill | captured or unchanged | `equals`, `equals_any`, `contains`, or state matcher |
+
+4. Map the ledger to assertions:
+   - initial template/user state -> `expected_prefilled_fields`
+   - fields absent initially and captured from that extraction turn ->
+     `expected_newly_captured`
+   - required end state -> `expected_fields`
+   - a specific invalid value or cross-field leak -> `forbidden_fields`
+5. Draft and lint the definition.
+6. While it remains a draft, run one calibration attempt and inspect the
+   initialized fields, each turn's newly captured fields, and the final state.
+7. Classify discrepancies as a bad test assumption, legitimate normalization,
+   profile/template prefill, or product defect. Correct the assertion only for
+   the first three; do not weaken an assertion that exposed a product defect.
+
+Do not infer that a field begins empty, was newly captured, or has a particular
+canonical representation without evidence. Use `equals` only for guaranteed
+storage, `equals_any` for legitimate normalized forms, and `contains` for
+stable partial content. If the manifest and database disagree, stop authoring
+and report schema drift.
+
+The database skill owns connection, query, and credential mechanics. Keep all
+queries read-only and narrowly scoped; do not copy SQL, secrets, or unrelated
+personal data into the test or this skill.
+
 ## Admin Generation Path
 
 Use `POST /eval/generate-scenario-draft` with:
@@ -249,6 +289,13 @@ templates, latest `PUBLISHED` versions, and transformed pdfMe field definitions.
 Use `--require-business-schema` when authoring tests so Codex fails fast instead
 of accidentally relying on fallback fields.
 
+Definition linting also validates non-guest replay and extraction `user_id`
+values against the target backend. This is a separate privacy-safe lookup that
+returns existence only; it does not expose user records. Missing users block
+lint and execution. If the validation service is unavailable, lint reports a
+warning while run preflight returns an availability error rather than creating
+a room with unusable identity state.
+
 ## Documentation Discovery
 
 Use the docs script when a Codex session needs to learn the QA system before
@@ -289,16 +336,17 @@ coverage tags, and stale/malformed YAML.
 2. For a replay, default to `user_mode: simulated`; use literal replay only
    when exact wording or matcher-anchored sequencing is essential.
 3. Fetch the manifest and select a valid `contract_type`.
-4. Use manifest field names in `field_data`, `expected_fields`, and
-   `forbidden_fields`.
-5. Pick a stable deterministic oracle.
-6. Set `ai_provider: codex` unless the user explicitly requests `live`.
-7. Add readable `title`/`notes`, taxonomy, and exact registered `covers` for
+4. For contract-field replays and extractions, use the read-only database skill
+   and classify initial/prefilled, newly captured, and final state.
+5. Use manifest field names and evidence-grounded matchers in field assertions.
+6. Pick a stable deterministic oracle.
+7. Set `ai_provider: codex` unless the user explicitly requests `live`.
+8. Add readable `title`/`notes`, taxonomy, and exact registered `covers` for
    every requirement the test proves.
-8. Save as `qa_status: draft`.
-9. Lint before review.
-10. Run the narrowest useful proof.
-11. Promote only after human/Codex review.
+9. Save as `qa_status: draft`.
+10. Lint before review.
+11. Run one calibration attempt and inspect initial, turn-delta, and final state.
+12. Promote only after human/Codex review.
 
 ## CRUD And Linking Checklist
 

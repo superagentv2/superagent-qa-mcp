@@ -83,7 +83,7 @@ contract_type: purchase
 mode: New
 mode_style: fast
 ai_provider: codex
-user_id: user_qa_draft
+user_id: REPLACE_WITH_VALID_USER_ID
 is_guest: false
 tier: 3
 user_mode: simulated
@@ -164,7 +164,7 @@ contract_type: purchase
 mode: New
 mode_style: fast
 ai_provider: codex
-user_id: user_qa_draft
+user_id: REPLACE_WITH_VALID_USER_ID
 init_transcript:
   - "user: Cash purchase for 700,000 dollars."
 extract_turns:
@@ -179,6 +179,54 @@ forbidden_fields: {}
 
 Use extraction fixtures when testing backend extraction only. They do not test
 voice-agent routing, conversation policy, or tool orchestration.
+
+For replay and extraction tests, replace `REPLACE_WITH_VALID_USER_ID` with a
+real user ID from the backend environment where the test will run. Draft lint
+checks the ID through the backend QA validation endpoint. A missing user is a
+blocking lint error; an unavailable validation service is a warning while
+editing, but execution preflight still refuses to start because an unverified
+identity cannot initialize reliable contract state. Guest-mode scenarios do
+not require this lookup.
+
+### Extraction state boundaries
+
+Treat extraction as three separate states: initial/prefilled state, the fields
+captured by one turn, and final accumulated state.
+
+- Use `expected_prefilled_fields` for template or selected-user state present
+  before the extraction turn.
+- Use `expected_newly_captured` only for fields that were absent initially and
+  were captured from that specific turn.
+- Use `expected_fields` for the required final accumulated state.
+- Use `forbidden_fields` for a specific invalid value or cross-field leak, not
+  to blanket unrelated or profile-backed fields as empty.
+
+```yaml
+expected_prefilled_fields:
+  broker_address:
+    not_empty: true
+
+extract_turns:
+  - segments:
+      - "user: The buyer address is 123 Test Street, Phoenix, Arizona 85001."
+    expected_newly_captured: [buyer_address, buyer_city, buyer_state, buyer_zip]
+
+expected_fields:
+  buyer_address:
+    equals: 123 Test Street
+  buyer_city:
+    equals_any: [Phoenix, phoenix]
+
+forbidden_fields:
+  broker_address:
+    equals: 123 Test Street
+```
+
+This example proves that the prefilled broker address survives, the buyer
+address components are captured by the current turn, and buyer data does not
+leak into the broker field. Confirm every field name and initial-state
+assumption from the manifest and read-only database evidence before using this
+pattern.
 
 ## Micro-Test YAML
 
@@ -228,6 +276,58 @@ Use:
   elsewhere in the conversation.
 - extraction `expected_fields` and `expected_newly_captured` for extraction.
 - tool-call assertions when the behavior is observable as a tool call.
+
+### Expected versus forbidden field assertions
+
+Both containers use the same inner matchers, but their polarity is opposite:
+
+| Container | When the inner matcher matches | Assertion result |
+| --- | --- | --- |
+| `expected_fields` | The expected state was observed | Pass |
+| `forbidden_fields` | The forbidden state was observed | Fail |
+
+The runner evaluates the field matcher first and negates that result for
+`forbidden_fields`. Consequently, do not mechanically reuse an
+`expected_fields` matcher under `forbidden_fields`.
+
+Canonical forms:
+
+```yaml
+# The field must be empty or absent. This is the clearest form.
+expected_fields:
+  agreement_commencement_date:
+    empty: true
+
+# Equivalent outcome expressed as a forbidden populated state.
+forbidden_fields:
+  agreement_commencement_date:
+    not_empty: true
+
+# One specific stale or incorrect value must not survive.
+forbidden_fields:
+  acceptance_date:
+    contains: "17:00"
+```
+
+Field-state outcomes:
+
+| Definition | Missing or empty field | Non-empty field |
+| --- | --- | --- |
+| `expected_fields: {field: {empty: true}}` | Pass | Fail |
+| `forbidden_fields: {field: {not_empty: true}}` | Pass | Fail |
+| `forbidden_fields: {field: {empty: true}}` | **Fail** | Pass |
+
+`empty: true` treats a missing field as empty. Therefore, the diagnostic
+`forbidden expectation matched: missing treated as empty` means the inner
+`empty` matcher succeeded and `forbidden_fields` then converted that match into
+a failure. If the intention was "must remain empty or absent," move the matcher
+to `expected_fields` or change the forbidden matcher to `not_empty: true`.
+
+Use `forbidden_fields` for a state that must not occur, such as a populated
+loan field in a cash transaction or a known stale value. Use
+`expected_fields` for the desired final state. The current `empty` and `absent`
+operators both accept a missing field; they do not prove that a key is
+physically absent from the payload.
 
 ### Per-assertion pass rates
 

@@ -110,6 +110,14 @@ Live API default. `openai` is not a valid QA test value.
 4. `qa_draft_create`
 5. Review, then lifecycle tools only after lint is clean
 
+For replay or extraction tests that assert contract fields, also load
+`../superagent-admin-db/SKILL.md` and use its read-only workflow to inspect the
+active published template, field configuration, and relevant selected-user
+prefills. Classify each assertion as initial/prefilled, newly captured, or
+final before writing YAML. Never infer emptiness, capture timing, or canonical
+storage format. Lint and inspect one calibration run before review. See
+`references/authoring-workflow.md` for the compact procedure.
+
 **Edit an existing test**
 
 1. `qa_catalog_search`
@@ -151,6 +159,30 @@ protect registered requirements. Refresh the hosted requirements first, use
 exact requirement IDs, and claim only behavior that the test's assertions
 actually prove. A full-flow replay may cover multiple requirements.
 
+## Field Assertion Polarity
+
+`expected_fields` and `forbidden_fields` use the same matchers with opposite
+outcomes:
+
+- `expected_fields`: the inner matcher must match.
+- `forbidden_fields`: the inner matcher must not match; a match fails the
+  assertion.
+
+Do not copy `empty: true` into `forbidden_fields` to mean "must be empty or
+absent." It means emptiness is forbidden and fails when the field is missing,
+because missing is treated as empty. Prefer this explicit form:
+
+```yaml
+expected_fields:
+  agreement_commencement_date:
+    empty: true
+```
+
+To forbid any populated value, use `not_empty: true` under
+`forbidden_fields`. To forbid one known bad value, use `equals` or `contains`
+under `forbidden_fields`. See `references/test-types-and-yaml.md` for the full
+truth table and examples.
+
 ## Assertion Pass-Rate Policy
 
 Use optional `min_pass_rate` on an individual timeline or final assertion when
@@ -185,6 +217,8 @@ an assertion to advisory merely to obtain a passing result.
 - Never promote generated YAML without human review.
 - Do not weaken assertions just to make a run pass.
 - Do not guess pdfMe/contract field names; fetch the manifest.
+- Replay and extraction `user_id` values must identify a real user in the
+  target backend environment. Never invent or retain a draft placeholder.
 - Do not directly mutate files outside the QA MCP/file APIs unless the user
   explicitly asks for local repo edits.
 - Treat `QA_RUNNER_TOKEN` as server-only. Admin users should normally provide
@@ -197,8 +231,8 @@ Load only the reference needed:
 - `references/test-types-and-yaml.md`: YAML shape, metadata, snapshots,
   assertions, and test-type differences.
 - `references/authoring-workflow.md`: authoring without codebase access,
-  replay backend/side-effect policy, generation, review, promotion, and
-  anti-patterns.
+  database-grounded contract authoring, replay backend/side-effect policy,
+  generation, review, promotion, and anti-patterns.
 - `references/admin-ui-contract.md`: admin QA UI/API semantics, catalog,
   filters, CRUD, lifecycle, and explorer behavior.
 - `references/runbook.md`: running tests, artifacts, runner activation, and
