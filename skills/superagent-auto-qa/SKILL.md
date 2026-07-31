@@ -1,6 +1,6 @@
 ---
 name: superagent-auto-qa
-description: "Use when working with SuperAgent automation QA through Codex: understanding the QA system, inspecting manifests, authoring or reviewing replay/extraction/microtest definitions, managing catalog files, lifecycle, linting, runs, jobs, coverage, requirements, or using the SuperAgent QA MCP tools."
+description: "Use when working with SuperAgent automation QA through Codex: understanding the QA system, inspecting manifests, authoring or reviewing replay/extraction/microtest definitions and snapshot bundles, managing catalog files, lifecycle, linting, runs, jobs, coverage, requirements, or using the SuperAgent QA MCP tools."
 ---
 
 # SuperAgent Auto QA
@@ -27,13 +27,17 @@ For any non-trivial QA task:
 3. Prefer `qa_catalog_search` for catalog discovery. Use filters/search terms
    whenever possible instead of fetching the whole catalog.
 4. Use `qa_files_tree_get` when the task is about folder/file structure,
-   snapshots, moves, deletes, or references.
+   snapshots, moves, deletes, or references. For a managed snapshot, use its
+   returned `bundle_id` with `qa_snapshot_bundle_get` rather than treating the
+   JSON artifact as the whole object.
 5. Use `qa_catalog_get` only when a truly full normalized catalog snapshot is
    needed. Expect it to be slow: it returns the entire catalog payload, currently
    large, and latency will increase as hosted QA accumulates more tests.
 6. Read definitions with `qa_definition_get` or raw files with
    `qa_file_content_get`.
-7. Before saving, lint with `qa_lint_definition`.
+7. Before saving a test definition, lint with `qa_lint_definition`. For a
+   snapshot recipe, use `qa_snapshot_recipe_validate` and require
+   `save_allowed: true` before generation.
 8. For writes, preserve optimistic locks such as `expectedHash` when the API
    returns one.
 9. Requirement write tools intentionally use lightweight writes: they save the
@@ -44,14 +48,24 @@ For any non-trivial QA task:
 ## Mental Model
 
 - **Definition**: YAML or runner-owned configuration describing a test.
-- **Run**: one execution of a definition, suite, or profile.
+- **Run**: one execution of a definition, suite, or profile. Snapshot generation
+  also records a diagnostic run, but the recipe is not itself a catalog test.
 - **Assertion/oracle**: the concrete pass/fail check.
 - **Manifest**: vocabulary source for contract types, fields, tools,
   assertions, addenda, lifecycle values, suites, profiles, and generation
   constraints.
 - **Catalog**: normalized view over tests, files, metadata, lifecycle,
   editability, runnability, references, and latest run status.
-- **Snapshot**: JSON state fixture used by micro-tests; not itself runnable.
+- **Snapshot bundle**: one logical fixture composed of a hidden replay recipe,
+  optional generated JSON artifact, generation metadata, and references from
+  consuming micro-tests.
+- **Snapshot recipe**: the replay and declarative capture gate that generate a
+  snapshot. It is the source of truth, infrastructure rather than a runnable QA
+  test, and excluded from normal catalog, coverage, playlist, and run actions.
+- **Snapshot artifact**: generated JSON runtime state consumed by micro-tests;
+  it may not exist until the first successful generation.
+- **Capture gate**: an `active_task` matcher, timeline `after` matcher, or both;
+  capture occurs at the end of the matching turn.
 
 ## Test Types
 
@@ -89,7 +103,7 @@ sequencing is itself required by the test. Literal replay consumes
 
 ## QA AI Provider Policy
 
-For every new or edited QA test definition, set:
+For every new or edited QA test definition or snapshot recipe, set:
 
 ```yaml
 ai_provider: codex
@@ -97,8 +111,8 @@ ai_provider: codex
 
 `codex` was built specifically for QA tests and is the mandatory default. Use
 `ai_provider: live` only when the user explicitly requests the Live API path.
-Never omit the key when authoring QA tests: an omitted value uses the backend's
-Live API default. `openai` is not a valid QA test value.
+Never omit the key when authoring QA tests or recipes: an omitted value uses the
+backend's Live API default. `openai` is not a valid QA value.
 
 ## Common Workflows
 
@@ -132,11 +146,39 @@ storage format. Lint and inspect one calibration run before review. See
 2. Poll with `qa_job_get` / `qa_jobs_list`
 3. Inspect `qa_runs_list`, `qa_run_get`, and `qa_run_markdown_get`
 
-**Manage files and snapshots**
+**Create or regenerate a snapshot bundle**
 
-Use `qa_files_tree_get` before moving or deleting. Snapshot paths may be
-referenced from micro-test YAML. If deleting or moving a referenced file,
-inspect references and report the impact before making the change.
+1. Call `qa_files_tree_get` to choose a simulations folder or discover an
+   existing snapshot's `bundle_id` and consumers.
+2. For a new fixture, call `qa_snapshot_bundle_create`. It creates a draft
+   recipe and deliberately does not manufacture placeholder JSON.
+3. Edit the returned recipe YAML without changing `recipe_type`, `bundle_id`,
+   or `snapshot_path`. Set `ai_provider: codex` unless Live was explicitly
+   requested, and use a real user in the target backend environment.
+4. Call `qa_snapshot_recipe_validate`. `valid` reports structural parsing;
+   require `save_allowed: true` and review all diagnostics before generation.
+5. Call `qa_snapshot_recipe_save` with the latest recipe `expectedHash`.
+6. Call `qa_snapshot_generate`, then poll its returned job with `qa_job_get`.
+   Use `qa_job_cancel` only when cancellation is requested.
+7. After a terminal job status, call `qa_snapshot_bundle_get`. Success requires
+   `generation_status: ready` and `artifact_available: true`.
+8. If generation fails, inspect job events/error and the saved generation
+   `run_id` when available. The previous working artifact remains untouched.
+9. Link the generated artifact from a micro-test using a path relative to that
+   micro-test YAML, then lint and run the consuming micro-test.
+
+Bundle statuses are `never_generated`, `generating`, `ready`, `stale`,
+`generation_failed`, and `manually_modified`; unmanaged existing JSON is
+`legacy`. A stale bundle needs regeneration. Raw JSON edits through
+`qa_file_content_save` are an advanced escape hatch: they mark a managed bundle
+manually modified, may bypass runtime-model validation, and will be overwritten
+by regeneration. Warn before using it.
+
+Use `qa_files_tree_get` before operations that affect references. Do not rename,
+move, or delete a managed bundle artifact through generic file tools: coupled
+bundle lifecycle endpoints are not available yet, so doing so can separate the
+artifact from its hidden recipe and metadata. For legacy snapshots, inspect and
+report all consumers before any move or deletion.
 
 **Catalog discovery**
 
@@ -219,6 +261,10 @@ an assertion to advisory merely to obtain a passing result.
 - Do not guess pdfMe/contract field names; fetch the manifest.
 - Replay and extraction `user_id` values must identify a real user in the
   target backend environment. Never invent or retain a draft placeholder.
+- Snapshot recipes also require a real target-environment user. Never create a
+  fake JSON shell; create a pending bundle and generate its artifact.
+- Do not manually edit generated snapshot JSON unless the user explicitly
+  requests advanced artifact editing and accepts that regeneration replaces it.
 - Do not directly mutate files outside the QA MCP/file APIs unless the user
   explicitly asks for local repo edits.
 - Treat `QA_RUNNER_TOKEN` as server-only. Admin users should normally provide
@@ -228,15 +274,15 @@ an assertion to advisory merely to obtain a passing result.
 
 Load only the reference needed:
 
-- `references/test-types-and-yaml.md`: YAML shape, metadata, snapshots,
-  assertions, and test-type differences.
+- `references/test-types-and-yaml.md`: YAML shape, metadata, snapshot recipe
+  schema/capture targets/statuses, assertions, and test-type differences.
 - `references/authoring-workflow.md`: authoring without codebase access,
   database-grounded contract authoring, replay backend/side-effect policy,
-  generation, review, promotion, and anti-patterns.
+  snapshot generation/linking, review, promotion, and anti-patterns.
 - `references/admin-ui-contract.md`: admin QA UI/API semantics, catalog,
-  filters, CRUD, lifecycle, and explorer behavior.
+  filters, CRUD, lifecycle, explorer behavior, and Snapshot Workbench.
 - `references/runbook.md`: running tests, artifacts, runner activation, and
-  safe run choices.
+  safe run/snapshot-generation choices and failure triage.
 - `references/source-map.md`: local code/documentation source map for sessions
   that also have the SuperAgent repositories.
 

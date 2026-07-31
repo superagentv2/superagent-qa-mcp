@@ -348,13 +348,48 @@ coverage tags, and stale/malformed YAML.
 11. Run one calibration attempt and inspect initial, turn-delta, and final state.
 12. Promote only after human/Codex review.
 
+## Snapshot Bundle Authoring Checklist
+
+Use a managed snapshot when a micro-test needs a reproducible runtime state.
+The replay recipe is the source of truth; its JSON artifact is generated output.
+
+1. Define the smallest runtime state the micro-test must resume from. Do not
+   capture an entire flow merely because it is convenient.
+2. Call `qa_files_tree_get` to choose the artifact folder and inspect existing
+   snapshots/references.
+3. Create the pending bundle with `qa_snapshot_bundle_create`. Keep the returned
+   `recipe_type`, `bundle_id`, and `snapshot_path` unchanged.
+4. Author the recipe as a normal replay using `ai_provider: codex` by default
+   and a real user in the target backend environment.
+5. Prefer a semantic capture gate: use `active_task`, an `after` timeline event,
+   or both. Do not use a fragile turn number. Capture occurs at end of turn.
+6. Validate with `qa_snapshot_recipe_validate`. Structural `valid: true` is not
+   sufficient; require `save_allowed: true` and review warnings/info.
+7. Save with `qa_snapshot_recipe_save` and the latest recipe `expectedHash`.
+8. Generate with `qa_snapshot_generate`, then poll the returned job using
+   `qa_job_get`. Do not start a second generation while one is active.
+9. On success, refresh with `qa_snapshot_bundle_get` and require `ready` plus an
+   available artifact. Inspect hashes, provenance, capture gate, source room,
+   source user, and generation run before trusting it.
+10. On failure, inspect job events/error and `qa_run_get` when a run ID was
+    saved. Fix the recipe or environment; never manufacture or patch a JSON
+    shell to bypass capture validation.
+11. Link the artifact using a relative `snapshot` path in the consuming
+    micro-test, lint it, and run one calibration attempt.
+
+Regenerate when the bundle is `stale`. Treat `manually_modified` as divergence:
+report it and obtain confirmation before generation replaces manual JSON edits.
+Generation failures do not destroy the prior working artifact.
+
 ## CRUD And Linking Checklist
 
 - Create new YAML with `POST /eval/tests/drafts` or by writing a file that
   includes `test_type` and valid schema.
 - Edit YAML through `GET|PUT /eval/tests/{test_id}/definition` when testing
   admin behavior; use file edits for repo maintenance.
-- Rename/move/delete through `/eval/files/*` when testing the explorer.
+- Rename/move/delete ordinary files through `/eval/files/*` when testing the
+  explorer. Do not use generic file operations on managed bundle artifacts
+  until coupled bundle lifecycle endpoints exist.
 - Before moving/deleting a snapshot, inspect `referenced_by` from
   `GET /eval/files/tree`.
 - When linking a snapshot to a micro-test, update the top-level `snapshot` key

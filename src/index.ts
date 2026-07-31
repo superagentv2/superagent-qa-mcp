@@ -414,7 +414,7 @@ server.tool(
 
 server.tool(
   "qa_file_content_save",
-  "Save raw file content with optimistic locking.",
+  "Save an existing snapshot JSON artifact with optimistic locking. Editing generated JSON marks its bundle manually modified; prefer recipe generation for normal changes.",
   {
     path: z.string(),
     content: z.string(),
@@ -435,15 +435,76 @@ server.tool(
 );
 
 server.tool(
-  "qa_snapshot_create",
-  "Create a snapshot JSON file.",
+  "qa_snapshot_bundle_create",
+  "Create a pending snapshot bundle with a replay recipe and no placeholder JSON artifact.",
   {
     path: z.string().default("simulations/microtests/snapshots"),
     name: z.string(),
-    content: z.string().optional(),
+    recipeYaml: z.string().optional(),
   },
-  async ({ path, name, content }) =>
-    jsonText(await qa.post("/eval/files/snapshots", { path, name, content }))
+  async ({ path, name, recipeYaml }) =>
+    jsonText(
+      await qa.post("/eval/snapshot-bundles", {
+        path,
+        name,
+        recipe_yaml: recipeYaml,
+      })
+    )
+);
+
+server.tool(
+  "qa_snapshot_bundle_get",
+  "Read a snapshot bundle, including its recipe, generated JSON, status, metadata, and consumers.",
+  { bundleId: z.string() },
+  async ({ bundleId }) =>
+    jsonText(await qa.get(`/eval/snapshot-bundles/${encode(bundleId)}`))
+);
+
+server.tool(
+  "qa_snapshot_recipe_validate",
+  "Validate and lint snapshot recipe YAML without saving it. Check save_allowed in the response before saving or generating.",
+  {
+    bundleId: z.string(),
+    yaml: z.string(),
+  },
+  async ({ bundleId, yaml }) =>
+    jsonText(
+      await qa.post(`/eval/snapshot-bundles/${encode(bundleId)}/recipe/validate`, {
+        yaml,
+      })
+    )
+);
+
+server.tool(
+  "qa_snapshot_recipe_save",
+  "Save snapshot recipe YAML with optimistic locking. Saving may return lint diagnostics; generation remains lint-gated.",
+  {
+    bundleId: z.string(),
+    yaml: z.string(),
+    expectedHash: optionalHash,
+  },
+  async ({ bundleId, yaml, expectedHash }) =>
+    jsonText(
+      await qa.put(`/eval/snapshot-bundles/${encode(bundleId)}/recipe`, {
+        yaml,
+        expected_hash: expectedHash,
+      })
+    )
+);
+
+server.tool(
+  "qa_snapshot_generate",
+  "Start asynchronous snapshot generation from the saved recipe. Poll or cancel the returned job with the generic QA job tools.",
+  {
+    bundleId: z.string(),
+    cleanup: boolDefault(true),
+  },
+  async ({ bundleId, cleanup }) =>
+    jsonText(
+      await qa.post(`/eval/snapshot-bundles/${encode(bundleId)}/generate`, {
+        cleanup,
+      })
+    )
 );
 
 server.tool(

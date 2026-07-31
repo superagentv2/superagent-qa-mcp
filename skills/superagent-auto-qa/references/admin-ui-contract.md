@@ -45,7 +45,11 @@ Main current endpoints in `runner_api.py`:
 - `GET /eval/files`
 - `GET /eval/files/tree`
 - `POST /eval/files/folders`
-- `POST /eval/files/snapshots`
+- `POST /eval/snapshot-bundles`
+- `GET /eval/snapshot-bundles/{bundle_id}`
+- `POST /eval/snapshot-bundles/{bundle_id}/recipe/validate`
+- `PUT /eval/snapshot-bundles/{bundle_id}/recipe`
+- `POST /eval/snapshot-bundles/{bundle_id}/generate`
 - `PATCH /eval/files/rename`
 - `PATCH /eval/files/move`
 - `DELETE /eval/files`
@@ -209,16 +213,24 @@ Explorer item kinds:
 
 File operations:
 
-- Create folder: `POST /eval/files/folders` with `parent_path`, `name`.
-- Create snapshot: `POST /eval/files/snapshots` with `parent_path`, `name`.
-- Rename: `PATCH /eval/files/rename` with `path`, `name`.
+- Create folder: `POST /eval/files/folders` with `path`, `name`.
+- Create a managed snapshot: `POST /eval/snapshot-bundles` with `path`, `name`,
+  and optional `recipe_yaml`. This creates a pending recipe without a fake JSON
+  artifact.
+- Rename: `PATCH /eval/files/rename` with `path`, `new_name`.
 - Move: `PATCH /eval/files/move` with `path`, `destination`.
 - Delete: `DELETE /eval/files?path=...&recursive=false`.
 - Read/write raw content: `GET|PUT /eval/files/content`.
 
-The file tree response includes reference metadata. Use it before moving or
-deleting snapshots or seed scenarios. The frontend warning is advisory; Codex
-should still inspect the references and explain the consequence.
+The file tree response includes reference metadata plus managed snapshot
+`bundle_id`, generation status, and artifact availability. Use it before moving
+or deleting snapshots or seed scenarios. The frontend warning is advisory;
+Codex should still inspect the references and explain the consequence.
+
+Generic rename/move/delete endpoints are not bundle-aware yet. Do not use them
+on a managed bundle artifact: they can separate the JSON path from its hidden
+recipe and generation metadata. They remain applicable to ordinary folders,
+test YAML, and deliberately managed legacy snapshots after reference review.
 
 ## Safe Run Dispatchers
 
@@ -265,20 +277,43 @@ The YAML editor must preserve semantic `test_type`. If a user moves a file into
 a different folder, the test type should not change. If YAML `test_type`
 contradicts the editor or runner type, the runner should reject the save.
 
-## Snapshots And Linking
+## Snapshot Workbench And Linking
 
-Snapshots are JSON state fixtures. They are not runnable on their own. A
-micro-test links one snapshot with top-level YAML:
+Managed snapshots are recipe-driven bundles. They are not runnable tests and do
+not appear in normal test catalog, coverage, playlist, or lifecycle actions.
+Selecting one in the Catalog exposes its bundle status and opens Snapshot
+Workbench with:
+
+- Replay Recipe: editable YAML, real-time validation/lint diagnostics, capture
+  gate, save, and Generate Snapshot.
+- Snapshot JSON: the generated artifact, read-only by default with an explicit
+  advanced-edit mode.
+- Bundle metadata: recipe/snapshot hashes, generation time and run, deployment,
+  manifest, capture gate, and consuming micro-tests.
+- Generation telemetry: queued, recipe, replay, validate, persist, and ready
+  phases, live runtime events, cancellation, and a collapsible monitor.
+
+The workbench reports `legacy`, `never_generated`, `generating`, `ready`,
+`stale`, `generation_failed`, and `manually_modified`. Saving a recipe does not
+generate the artifact. Generation is a normal asynchronous QA job and can be
+polled or canceled through the generic job endpoints. Failed generation records
+diagnostics and preserves the previous working artifact.
+
+The recipe is the source of truth. Advanced JSON edits mark the bundle manually
+modified; regenerating warns before atomically replacing those changes.
+
+A micro-test links one generated snapshot with top-level YAML:
 
 ```yaml
 test_type: microtest
 snapshot: ../snapshots/example.json
 ```
 
-The `snapshot` path is resolved relative to the micro-test YAML file. When a
-snapshot is moved, any linked micro-tests may need path updates. The admin UI
-provides Add Snapshot from the right rail/context menu for editable micro-tests;
-that action writes/replaces the YAML `snapshot` key and saves the definition.
+The `snapshot` path is resolved relative to the micro-test YAML file. The admin
+UI provides Add Snapshot from the right rail/context menu for editable
+micro-tests; that action writes/replaces the YAML `snapshot` key and saves the
+definition. After linking, lint and run the micro-test: successful generation
+proves artifact validity, not compatibility with every consumer.
 
 ## Lifecycle
 

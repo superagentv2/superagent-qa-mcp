@@ -92,12 +92,19 @@ The server exposes the QA automation API as MCP tools:
 - Health, manifest, catalog search, and catalog read.
 - Definition read/save, draft generation, draft creation, linting, lifecycle,
   and archive.
-- File explorer tree/list/content, folder create, snapshot create, rename,
-  move, and delete.
+- File explorer tree/list/content, folder create, rename, move, and delete.
+- Snapshot bundle creation/read, replay-recipe validation/save, and asynchronous
+  generation. Generation uses the generic job get/cancel tools for progress and
+  cancellation.
 - Requirements and coverage read/write/bulk mutation.
 - Runs, run markdown, jobs, cancel, single run, bulk run, suite run, profile
   run, and triage.
 - Legacy scenario compatibility endpoints.
+
+Snapshot replay recipes are the source of truth for newly created fixtures.
+`qa_file_content_save` remains available for deliberate advanced edits to an
+existing JSON artifact; it does not create missing snapshots, and editing a
+generated artifact marks its bundle as manually modified.
 
 It also exposes read-only MCP resources:
 

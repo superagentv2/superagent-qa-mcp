@@ -99,6 +99,41 @@ python evaluate.py micro-test simulations/microtests/addenda/example.yaml --live
 
 Default admin dispatcher uses `--offline-backend` for micro-tests.
 
+## Generate And Triage Snapshot Bundles Through MCP
+
+Use the bundle tools rather than creating JSON directly:
+
+1. `qa_files_tree_get`
+2. `qa_snapshot_bundle_create` for a new fixture, or
+   `qa_snapshot_bundle_get` for an existing `bundleId`
+3. `qa_snapshot_recipe_validate`
+4. `qa_snapshot_recipe_save` with `expectedHash`
+5. `qa_snapshot_generate`
+6. Poll `qa_job_get` until `passed`, `failed`, `error`, or `canceled`
+7. `qa_snapshot_bundle_get` to confirm final bundle state
+
+Generation phases are queued, recipe preparation, replay execution, candidate
+validation, artifact persistence, and completion. A successful job is not the
+only acceptance signal: require `generation_status: ready` and
+`artifact_available: true` from the refreshed bundle.
+
+For a failed generation:
+
+- Read the job `error`, events, room/user metadata, and `run_id`.
+- Use `qa_run_get` for the saved replay artifact when a run ID is present.
+- `snapshot capture gate was never reached` means replay never satisfied the
+  declared event/task gate.
+- `capture gate was reached, but capture failed` means the runtime state was not
+  safely serializable or was an unsupported agent state.
+- Fatal initialization or missing runtime-state errors mean the candidate was
+  rejected after capture validation.
+- Correct the recipe/environment and retry. The last valid JSON remains in
+  place after failure.
+
+Use `qa_job_cancel` only when cancellation is requested. Do not edit generated
+JSON to turn a failed generation green; raw editing bypasses the reproducible
+recipe path and marks the bundle manually modified.
+
 ## Suites And Profiles
 
 ```bash

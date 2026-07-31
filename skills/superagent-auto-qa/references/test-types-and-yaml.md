@@ -261,8 +261,102 @@ timeline_assertions:
 fake_backend: {}
 ```
 
-Generated micro-tests must reference an approved existing snapshot. The browser
-does not edit raw snapshot JSON.
+Generated micro-tests must reference an approved existing snapshot. Managed
+snapshot JSON is generated from a replay recipe and is read-only by default in
+the browser. Advanced JSON editing is available, but marks the bundle manually
+modified and is not the normal authoring path.
+
+## Snapshot Bundle Recipe YAML
+
+A managed snapshot is a bundle containing a hidden replay recipe, its generated
+JSON artifact, generation metadata, and references from consuming micro-tests.
+The recipe is the source of truth; the JSON is a replaceable build artifact.
+Recipes are infrastructure, not runnable QA tests, and do not participate in
+catalog test lists, coverage, playlists, or lifecycle promotion.
+
+The bundle API creates and owns `recipe_type`, `bundle_id`, and
+`snapshot_path`. Preserve them exactly when editing:
+
+```yaml
+recipe_type: snapshot
+bundle_id: 6c924f2231f84555a3b1de067d1017fb
+snapshot_path: simulations/microtests/snapshots/purchase-after-area.json
+snapshot_capture:
+  active_task:
+    kind: FlatTask
+    identifier: flat
+  after:
+    event: field_captured
+    field: geographical_area
+  capture_at: end_of_turn
+
+test_type: replay
+qa_status: draft
+jira: SNAPSHOT-PURCHASE-AFTER-AREA
+title: Purchase state after geographical area
+notes: Generates a reusable state fixture after the target field is captured.
+source_trace: snapshot-recipe
+contract_type: purchase
+mode: New
+mode_style: fast
+ai_provider: codex
+user_id: user_real_target_environment_id
+user_mode: simulated
+goal: |
+  Start a new purchase contract and provide the requested geographical area.
+field_data:
+  geographical_area: Maricopa County, Arizona
+intents: []
+bug_signature: []
+timeline_assertions: []
+max_turns: 40
+```
+
+`snapshot_capture` requires `active_task`, `after`, or both:
+
+- `active_task` waits for a resumable runtime task/agent state.
+- `after` reuses the timeline event matcher vocabulary and waits for matching
+  runtime evidence.
+- Combining both requires the event and active runtime state to agree.
+- `capture_at` currently only accepts `end_of_turn`: the triggering turn is
+  allowed to complete, then the resulting runtime state is captured and replay
+  stops.
+
+Supported `active_task.kind` values are:
+
+- `AddendumTask`, `FlatAddendumTask`, `SectionTask`, `FlatTask`, and
+  `WorkspaceTask`.
+- `ClauseReviewTask`.
+- `FillingAgent`, limited to resumable post-section states such as edit or
+  completion menus.
+- `ReviewAgent` while awaiting input, awaiting confirmation, or in its stable
+  failed state; never while review delivery is active.
+- `SignatureAgent` only before sending while awaiting input or confirmation;
+  never while signature delivery is active.
+
+`InitAgent` and other unsupported runtime kinds cannot be snapshot targets.
+Addendum, section, and workspace task snapshots require a meaningful task
+identifier; task snapshots that resume schema-driven work require cached schema
+state.
+
+Before replacing an artifact, generation validates the current Snapshot model,
+rejects fatal backend initialization failures, and requires non-empty runtime
+state including `user_id`, `contract_type`, `mode`, `post_init_prompt`,
+`document_id`, `deal_id`, and `section_order`. The candidate is written to a
+temporary path and atomically replaces the prior JSON only after validation.
+Failure therefore leaves the previous working artifact untouched.
+
+Bundle status meanings:
+
+| Status | Meaning |
+| --- | --- |
+| `legacy` | Existing unmanaged JSON without a replay recipe. |
+| `never_generated` | Recipe exists, but no successful artifact exists yet. |
+| `generating` | A generation job is queued or running. |
+| `ready` | Artifact matches its recipe and recorded environment metadata. |
+| `stale` | Recipe, deployment, or manifest changed since generation. |
+| `generation_failed` | The latest generation attempt failed. |
+| `manually_modified` | Artifact hash differs from the generated hash. |
 
 ## Assertions
 

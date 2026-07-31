@@ -42,6 +42,10 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 - Replay and micro-test schema: `core/testing/regression_scenario.py`
 - Extraction schema: `core/testing/extraction_scenario.py`
 - Conversation runner: `core/testing/conversation_runner.py`
+- Snapshot runtime model and capture/restore support:
+  `core/testing/snapshot.py`
+- Snapshot recipe bundles, capture gates, status, generation metadata, and
+  candidate validation: `core/testing/snapshot_bundles.py`
 - Assertion engine: `core/testing/assertions.py`
 - Semantic bug signatures: `core/testing/bug_signature.py`
 - Assertion catalog helpers:
@@ -67,6 +71,9 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 - Micro-tests: `simulations/microtests/**/*.yaml`
 - Generated micro-test drafts: `simulations/microtests/generated/*.yaml`
 - Micro-test snapshots: `simulations/microtests/snapshots/**/*.json`
+- Hidden managed snapshot recipes and generation metadata:
+  `simulations/.snapshot-recipes/*.yaml`,
+  `simulations/.snapshot-recipes/*.generation.json`
 - Run artifacts: `artifacts/eval-runs/`
 - Requirements source of truth: `docs/evaluation/requirements.yaml`
 - Legacy coverage matrix, retained for history/migration: `docs/evaluation/COVERAGE_MATRIX.md`
@@ -79,6 +86,8 @@ Use this as the first code-navigation map for SuperAgent QA automation.
   `../superagentv2_frontend/app/qa-tests/page.tsx`
 - QA workbench:
   `../superagentv2_frontend/components/superagent/qa/QAWorkbench.tsx`
+- Snapshot recipe/JSON editor and generation monitor:
+  `../superagentv2_frontend/components/superagent/qa/SnapshotBundleWorkbench.tsx`
 - Runner client/types:
   `../superagentv2_frontend/lib/api/qa-runner.ts`
 - Runner proxy:
