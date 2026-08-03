@@ -316,18 +316,20 @@ server.tool(
 
 server.tool(
   "qa_lint_definition",
-  "Lint a YAML test definition draft. Snapshot-backed replays require explicit test_type replay and a current backend-bearing checkpoint; relative-path compatibility is fully checked again when the saved definition has a catalog path.",
+  "Lint a YAML test definition draft. Pass testId when editing an existing catalog test so relative snapshot paths and captured identity are checked immediately against that file's location.",
   {
     yaml: z.string(),
     testType: z.string().default("replay"),
     jurisdictionCode: z.string().default("AZ"),
+    testId: z.string().optional(),
   },
-  async ({ yaml, testType, jurisdictionCode }) =>
+  async ({ yaml, testType, jurisdictionCode, testId }) =>
     jsonText(
       await qa.post("/eval/validate-scenario-draft", {
         yaml,
         test_type: testType,
         jurisdiction_code: jurisdictionCode,
+        test_id: testId,
       })
     )
 );

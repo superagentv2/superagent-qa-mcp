@@ -317,8 +317,11 @@ snapshot: ../snapshots/example.json
 The `snapshot` path is resolved relative to the consumer YAML file. The admin UI
 provides Add Snapshot from the right rail/context menu for editable replays and
 micro-tests; that action writes/replaces the YAML `snapshot` key and saves the
-definition. After linking, lint and run the consumer: successful generation
-proves artifact validity, not compatibility with every replay or microtest.
+definition. Existing-file lint requests include the selected catalog `test_id`,
+so live lint resolves relative snapshot paths from the real definition location
+and immediately checks artifact existence and replay identity compatibility.
+After linking, lint and run the consumer: successful generation proves artifact
+validity, not compatibility with every replay or microtest.
 
 Catalog rows expose `start_mode` and `snapshot_path` for checkpoint consumers.
 A replay consumer requires a version 3 artifact with `backend_state`, matching

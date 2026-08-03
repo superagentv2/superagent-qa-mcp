@@ -394,7 +394,9 @@ artifact is generated output.
    saved. Fix the recipe or environment rather than manufacturing a JSON shell
    merely to bypass capture validation.
 11. Link the artifact using a relative `snapshot` path in the consuming replay
-   or micro-test, lint it, and run one calibration attempt. A resumed replay
+   or micro-test. Lint an existing consumer with `qa_lint_definition` and its
+   `testId` so the runner resolves that relative path and checks captured
+   identity immediately, then run one calibration attempt. A resumed replay
    requires the generated version 3 backend seed; legacy artifacts remain
    microtest-only.
 

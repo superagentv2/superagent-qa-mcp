@@ -123,8 +123,10 @@ generation replaces it.
    replay YAML. Do not combine it with `seed_scenario`.
 3. Require a version 3 artifact with `backend_state`, and match `user_id`,
    `contract_type`, `mode`, and `mode_style` to the captured identity.
-4. Run `qa_lint_definition`, save with `qa_definition_save`, then launch with
-   the ordinary `qa_test_run` tool. No special resume tool is required.
+4. Run `qa_lint_definition` with the replay's `testId` so its relative snapshot
+   path and captured identity are checked immediately. Save with
+   `qa_definition_save`, then launch with the ordinary `qa_test_run` tool. No
+   special resume tool is required.
 5. Poll `qa_job_get`. The `preparing` events expose checkpoint loading, isolated
    backend hydration, identifier remapping, and runtime restoration before the
    `snapshot_resumed` event hands control to normal execution.

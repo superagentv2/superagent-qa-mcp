@@ -35,9 +35,11 @@ For any non-trivial QA task:
    large, and latency will increase as hosted QA accumulates more tests.
 6. Read definitions with `qa_definition_get` or raw files with
    `qa_file_content_get`.
-7. Before saving a test definition, lint with `qa_lint_definition`. For a
-   snapshot recipe, use `qa_snapshot_recipe_validate` and require
-   `save_allowed: true` before generation.
+7. Before saving a test definition, lint with `qa_lint_definition`. When editing
+   an existing catalog test, pass its `testId` so relative snapshot paths and
+   captured identity are validated immediately. For a snapshot recipe, use
+   `qa_snapshot_recipe_validate` and require `save_allowed: true` before
+   generation.
 8. For writes, preserve optimistic locks such as `expectedHash` when the API
    returns one.
 9. Requirement write tools intentionally use lightweight writes: they save the
@@ -142,7 +144,7 @@ storage format. Lint and inspect one calibration run before review. See
 1. `qa_catalog_search`
 2. `qa_definition_get`
 3. Make a narrow YAML change
-4. `qa_lint_definition`
+4. `qa_lint_definition` with the same `testId`
 5. `qa_definition_save` with `expectedHash`
 
 **Run and triage**
