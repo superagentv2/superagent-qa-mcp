@@ -387,9 +387,10 @@ Generation failures do not destroy the prior working artifact.
   includes `test_type` and valid schema.
 - Edit YAML through `GET|PUT /eval/tests/{test_id}/definition` when testing
   admin behavior; use file edits for repo maintenance.
-- Rename/move/delete ordinary files through `/eval/files/*` when testing the
-  explorer. Do not use generic file operations on managed bundle artifacts
-  until coupled bundle lifecycle endpoints exist.
+- Rename through `/eval/files/rename`; the runner remaps descendants, YAML
+  references, managed snapshot paths, and path-based playlist IDs. Move/delete
+  ordinary files through `/eval/files/*`, but do not use those two operations on
+  managed bundle artifacts until their coupled lifecycle support exists.
 - Before moving/deleting a snapshot, inspect `referenced_by` from
   `GET /eval/files/tree`.
 - When linking a snapshot to a micro-test, update the top-level `snapshot` key

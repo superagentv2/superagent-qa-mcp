@@ -227,10 +227,12 @@ The file tree response includes reference metadata plus managed snapshot
 or deleting snapshots or seed scenarios. The frontend warning is advisory;
 Codex should still inspect the references and explain the consequence.
 
-Generic rename/move/delete endpoints are not bundle-aware yet. Do not use them
-on a managed bundle artifact: they can separate the JSON path from its hidden
-recipe and generation metadata. They remain applicable to ordinary folders,
-test YAML, and deliberately managed legacy snapshots after reference review.
+Rename is coordinated across the explorer tree: folder descendants, YAML
+`snapshot`/`seed_scenario` references, managed bundle artifact paths, and
+path-based playlist IDs are remapped, and the response includes
+`renamed_from`, `renamed_to`, and `test_id_updates`. Generic move/delete remain
+non-bundle-aware; do not use them on managed bundle artifacts because they can
+separate JSON from its hidden recipe and generation metadata.
 
 ## Safe Run Dispatchers
 

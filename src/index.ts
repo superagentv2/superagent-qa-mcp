@@ -509,7 +509,7 @@ server.tool(
 
 server.tool(
   "qa_file_rename",
-  "Rename a QA explorer file or folder.",
+  "Rename a QA explorer file or folder and remap descendant paths, YAML references, managed snapshot paths, and path-based playlist ids.",
   {
     path: z.string(),
     newName: z.string(),

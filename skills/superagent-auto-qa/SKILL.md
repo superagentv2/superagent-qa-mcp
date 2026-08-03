@@ -174,11 +174,12 @@ Bundle statuses are `never_generated`, `generating`, `ready`, `stale`,
 manually modified, may bypass runtime-model validation, and will be overwritten
 by regeneration. Warn before using it.
 
-Use `qa_files_tree_get` before operations that affect references. Do not rename,
-move, or delete a managed bundle artifact through generic file tools: coupled
-bundle lifecycle endpoints are not available yet, so doing so can separate the
-artifact from its hidden recipe and metadata. For legacy snapshots, inspect and
-report all consumers before any move or deletion.
+Use `qa_files_tree_get` before operations that affect references. Rename is
+coordinated: the runner remaps descendant paths, YAML `snapshot`/`seed_scenario`
+references, managed bundle artifact paths, and path-based playlist IDs. Move and
+delete are not yet bundle-aware, so do not use them on managed bundle artifacts.
+For legacy snapshots, inspect and report all consumers before any move or
+deletion.
 
 **Catalog discovery**
 
