@@ -41,7 +41,8 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 - Main CLI: `evaluate.py`
 - Replay and micro-test schema: `core/testing/regression_scenario.py`
 - Extraction schema: `core/testing/extraction_scenario.py`
-- Conversation runner: `core/testing/conversation_runner.py`
+- Conversation runner, including resumed replay validation, hydration, ID
+  remapping, and runtime restoration: `core/testing/conversation_runner.py`
 - Snapshot runtime model and capture/restore support:
   `core/testing/snapshot.py`
 - Snapshot recipe bundles, capture gates, status, generation metadata, and
@@ -70,7 +71,9 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 - Generated extraction drafts: `simulations/extraction/generated/*.yaml`
 - Micro-tests: `simulations/microtests/**/*.yaml`
 - Generated micro-test drafts: `simulations/microtests/generated/*.yaml`
-- Micro-test snapshots: `simulations/microtests/snapshots/**/*.json`
+- Shared snapshot checkpoints: `simulations/snapshots/**/*.json` by default;
+  compatible legacy artifacts may still live under
+  `simulations/microtests/snapshots/**/*.json`.
 - Hidden managed snapshot recipes and generation metadata:
   `simulations/.snapshot-recipes/*.yaml`,
   `simulations/.snapshot-recipes/*.generation.json`
@@ -102,3 +105,16 @@ Use this as the first code-navigation map for SuperAgent QA automation.
   `/v1/admin/qa/manifest/business-schema`
 - Use this for latest published pdfMe/schema-derived field names, contract
   types, addenda, and lifecycle/business values.
+
+## Backend Replay-State Support
+
+- Replay-state API controller:
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/controllers/ReplayStateController.java`
+- Export/hydration service:
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/services/ReplayStateService.java`
+- Hydration/export request DTOs:
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/requests/ReplayStateHydrateRequest.java`,
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/requests/ReplayStateExportRequest.java`
+- Hydration/backend-state responses:
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/responses/ReplayStateHydrateResponse.java`,
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/responses/ReplayBackendState.java`

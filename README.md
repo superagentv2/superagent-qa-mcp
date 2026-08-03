@@ -92,19 +92,49 @@ The server exposes the QA automation API as MCP tools:
 - Health, manifest, catalog search, and catalog read.
 - Definition read/save, draft generation, draft creation, linting, lifecycle,
   and archive.
-- File explorer tree/list/content, folder create, rename, move, and delete.
-- Snapshot bundle creation/read, replay-recipe validation/save, and asynchronous
-  generation. Generation uses the generic job get/cancel tools for progress and
-  cancellation.
+- File explorer tree/list/content, folder create, coordinated rename/move, and
+  delete. Rename and move preserve YAML references, managed snapshot paths, and
+  path-based playlist IDs.
+- Snapshot bundle creation/read, replay-recipe validation/save, manual artifact
+  override, and asynchronous generation. Generated checkpoints can feed resumed
+  replays or offline microtests. Generation uses the generic job get/cancel tools
+  for progress and cancellation.
 - Requirements and coverage read/write/bulk mutation.
 - Runs, run markdown, jobs, cancel, single run, bulk run, suite run, profile
   run, and triage.
 - Legacy scenario compatibility endpoints.
 
-Snapshot replay recipes are the source of truth for newly created fixtures.
-`qa_file_content_save` remains available for deliberate advanced edits to an
-existing JSON artifact; it does not create missing snapshots, and editing a
-generated artifact marks its bundle as manually modified.
+Snapshot replay recipes are the source of truth for newly created fixtures. New
+generation produces a version 3 checkpoint containing reconstructable agent
+state and a restricted backend hydration seed. Versions 1 and 2 remain usable by
+offline microtests but cannot start a resumed replay.
+
+`qa_snapshot_artifact_save` is the validated manual override for managed bundle
+artifacts. `qa_file_content_save` remains a lower-level escape hatch for
+deliberate edits to an existing JSON file; it does not create missing snapshots.
+Either manual path marks a generated artifact as manually modified, and later
+generation replaces it.
+
+### Resumed Replay Workflow
+
+1. Find the replay and checkpoint with `qa_catalog_search` and
+   `qa_snapshot_bundle_get`, then read the YAML with `qa_definition_get`.
+2. Keep `test_type: replay` explicit and add a `snapshot` path relative to the
+   replay YAML. Do not combine it with `seed_scenario`.
+3. Require a version 3 artifact with `backend_state`, and match `user_id`,
+   `contract_type`, `mode`, and `mode_style` to the captured identity.
+4. Run `qa_lint_definition`, save with `qa_definition_save`, then launch with
+   the ordinary `qa_test_run` tool. No special resume tool is required.
+5. Poll `qa_job_get`. The `preparing` events expose checkpoint loading, isolated
+   backend hydration, identifier remapping, and runtime restoration before the
+   `snapshot_resumed` event hands control to normal execution.
+6. Inspect the saved run with `qa_run_get`; catalog rows expose `start_mode` and
+   `snapshot_path`, while the run report records `resume_context`.
+
+The source checkpoint is immutable and backend records are cloned into a fresh
+room, but execution after resume is not offline: it uses the real agent, tools,
+backend behavior, and any side effects allowed by that test environment. Use
+synthetic identities and safe test destinations.
 
 It also exposes read-only MCP resources:
 

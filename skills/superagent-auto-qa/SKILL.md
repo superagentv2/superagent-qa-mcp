@@ -58,12 +58,15 @@ For any non-trivial QA task:
   editability, runnability, references, and latest run status.
 - **Snapshot bundle**: one logical fixture composed of a hidden replay recipe,
   optional generated JSON artifact, generation metadata, and references from
-  consuming micro-tests.
+  consuming replays or micro-tests.
 - **Snapshot recipe**: the replay and declarative capture gate that generate a
   snapshot. It is the source of truth, infrastructure rather than a runnable QA
   test, and excluded from normal catalog, coverage, playlist, and run actions.
-- **Snapshot artifact**: generated JSON runtime state consumed by micro-tests;
-  it may not exist until the first successful generation.
+- **Snapshot artifact**: generated JSON runtime state. Current version 3
+  artifacts contain reconstructable agent state plus a restricted backend
+  hydration seed and can start resumed replays or offline micro-tests. Legacy
+  versions 1 and 2 remain microtest-only. An artifact may not exist until the
+  first successful generation.
 - **Capture gate**: an `active_task` matcher, timeline `after` matcher, or both;
   capture occurs at the end of the matching turn.
 
@@ -79,10 +82,12 @@ Folder path is organization, not identity. QA users can arrange files under
 `simulations/`; test type must come from explicit metadata or catalog semantics,
 not only from folder names.
 
-- **Replay**: runs the voice agent through a simulated or literal conversation.
+- **Replay**: runs the real voice-agent conversation loop. It starts fresh by
+  default or resumes from a generated version 3 checkpoint when `snapshot` is
+  supplied.
 - **Extraction**: checks backend extraction behavior without the voice loop.
-- **Microtest**: resumes from a snapshot JSON, injects turns, and asserts a
-  narrow behavior.
+- **Microtest**: uses snapshot state in the fast offline harness, injects turns,
+  and asserts a narrow behavior without resuming the full backend conversation.
 
 ### Replay User Driver Policy
 
@@ -146,6 +151,11 @@ storage format. Lint and inspect one calibration run before review. See
 2. Poll with `qa_job_get` / `qa_jobs_list`
 3. Inspect `qa_runs_list`, `qa_run_get`, and `qa_run_markdown_get`
 
+For a snapshot-backed replay, inspect the `preparing` job events before normal
+execution. They expose snapshot loading, isolated backend hydration, identifier
+remapping, and runtime restoration. `snapshot_resumed` marks the transition into
+the ordinary replay loop; the saved report includes `resume_context`.
+
 **Create or regenerate a snapshot bundle**
 
 1. Call `qa_files_tree_get` to choose a simulations folder or discover an
@@ -164,8 +174,23 @@ storage format. Lint and inspect one calibration run before review. See
    `generation_status: ready` and `artifact_available: true`.
 8. If generation fails, inspect job events/error and the saved generation
    `run_id` when available. The previous working artifact remains untouched.
-9. Link the generated artifact from a micro-test using a path relative to that
-   micro-test YAML, then lint and run the consuming micro-test.
+9. Link the generated artifact from a replay or micro-test using a path relative
+   to the consuming YAML, then lint and run that consumer.
+
+**Attach a snapshot to a replay**
+
+1. Read the replay and snapshot bundle. Require explicit `test_type: replay`.
+2. Add a top-level `snapshot` path relative to the replay YAML. Do not combine
+   `snapshot` with `seed_scenario`.
+3. Require `format_version: 3` with `backend_state`. Version 1 or 2 artifacts are
+   valid only for offline microtests.
+4. Match the replay's `user_id`, `contract_type`, `mode`, and `mode_style` to the
+   captured snapshot identity.
+5. Lint, save with the latest optimistic hash, run through `qa_test_run`, and
+   poll `qa_job_get` through PREPARE and `snapshot_resumed`.
+6. Inspect `resume_context` and the transcript/assertions in the saved run. A
+   resumed replay must not emit a cold-opening turn before continuing the saved
+   conversation.
 
 When the user explicitly requests a manual artifact instead of generation,
 call `qa_snapshot_artifact_save` with a complete runtime snapshot JSON object.
@@ -183,12 +208,12 @@ Raw edits through `qa_file_content_save` remain a lower-level escape hatch for
 existing files and may bypass runtime-model validation. Either form of manual
 editing is overwritten by regeneration; warn before using it.
 
-Use `qa_files_tree_get` before operations that affect references. Rename is
-coordinated: the runner remaps descendant paths, YAML `snapshot`/`seed_scenario`
-references, managed bundle artifact paths, and path-based playlist IDs. Move and
-delete are not yet bundle-aware, so do not use them on managed bundle artifacts.
-For legacy snapshots, inspect and report all consumers before any move or
-deletion.
+Use `qa_files_tree_get` before operations that affect references. Rename and
+move are coordinated: the runner remaps descendant paths, YAML
+`snapshot`/`seed_scenario` references, managed bundle artifact paths, and
+path-based playlist IDs. Delete is not yet bundle-aware, so do not delete a
+managed bundle artifact through the generic file API. For legacy snapshots,
+inspect and report all consumers before any move or deletion.
 
 **Catalog discovery**
 
@@ -273,6 +298,11 @@ an assertion to advisory merely to obtain a passing result.
   target backend environment. Never invent or retain a draft placeholder.
 - Snapshot recipes also require a real target-environment user. Never create a
   fake JSON shell; create a pending bundle and generate its artifact.
+- Snapshot hydration clones the captured backend graph into a fresh isolated
+  room and never mutates the source checkpoint. Execution after resume still
+  uses the real agent, tools, backend behavior, and permitted side effects; it
+  is not an offline safety boundary. Use synthetic users, mailboxes, and safe
+  delivery targets.
 - Do not manually edit generated snapshot JSON unless the user explicitly
   requests advanced artifact editing and accepts that regeneration replaces it.
 - Do not directly mutate files outside the QA MCP/file APIs unless the user

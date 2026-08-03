@@ -4,7 +4,7 @@
 
 The `/admin/qa` workbench centers on these normalized catalog test types:
 
-- `replay`: voice-agent regression scenarios.
+- `replay`: fresh or snapshot-backed voice-agent regression scenarios.
 - `extraction`: isolated backend extraction fixtures.
 - `microtest`: snapshot resume tests.
 - `suite`: curated eval suites from `evaluate.py eval-suite`.
@@ -29,7 +29,7 @@ prefer. The runner classifies definitions in this order:
 
 1. Explicit YAML `test_type`.
 2. Existing catalog/runner metadata for known rows.
-3. YAML shape fallback: `snapshot`/`user_turns` implies `microtest`;
+3. YAML shape fallback: `user_turns`/`checks` implies `microtest`;
    `init_transcript`/`extract_turns` implies `extraction`.
 4. Legacy path fallback only.
 
@@ -138,8 +138,26 @@ intent and emits its `original_line` verbatim. Include matcher phrases only
 when `user_mode: replay` needs them; omit them from simulated-mode definitions
 unless the same fixture intentionally supports literal replay as well.
 
-A replay starts a conversation and does not require a snapshot. Use a
-micro-test instead when the test must resume from a known mid-call state.
+A replay starts a fresh conversation by default. To continue from known
+mid-call state while exercising the real voice-agent loop, tools, and backend,
+add a generated snapshot:
+
+```yaml
+test_type: replay
+contract_type: purchase
+mode: Edit
+mode_style: fast
+ai_provider: codex
+user_id: user_real_target_environment_id
+snapshot: ../snapshots/purchase-review-ready.json
+```
+
+The path is relative to the replay YAML. Snapshot-backed replay requires a
+version 3 artifact with `backend_state`; versions 1 and 2 remain valid only for
+offline microtests. The replay and checkpoint must match on `user_id`,
+`contract_type`, `mode`, and `mode_style`. `snapshot` and `seed_scenario` are
+mutually exclusive because both define initial state. Use a micro-test instead
+when fast offline behavior is the intended subject.
 
 Do not assume that adding `fake_backend` to replay YAML activates offline
 execution. In the current hosted MCP/UI execution path, replays use the real
@@ -270,7 +288,8 @@ mark the bundle manually modified, and remain an exceptional authoring path.
 ## Snapshot Bundle Recipe YAML
 
 A managed snapshot is a bundle containing a hidden replay recipe, its generated
-JSON artifact, generation metadata, and references from consuming micro-tests.
+JSON artifact, generation metadata, and references from consuming replays or
+micro-tests.
 The recipe is the source of truth; the JSON is a replaceable build artifact.
 Recipes are infrastructure, not runnable QA tests, and do not participate in
 catalog test lists, coverage, playlists, or lifecycle promotion.
@@ -281,7 +300,7 @@ The bundle API creates and owns `recipe_type`, `bundle_id`, and
 ```yaml
 recipe_type: snapshot
 bundle_id: 6c924f2231f84555a3b1de067d1017fb
-snapshot_path: simulations/microtests/snapshots/purchase-after-area.json
+snapshot_path: simulations/snapshots/purchase-after-area.json
 snapshot_capture:
   active_task:
     kind: FlatTask
@@ -346,6 +365,16 @@ state including `user_id`, `contract_type`, `mode`, `post_init_prompt`,
 `document_id`, `deal_id`, and `section_order`. The candidate is written to a
 temporary path and atomically replaces the prior JSON only after validation.
 Failure therefore leaves the previous working artifact untouched.
+
+New generated artifacts use `format_version: 3`. Alongside reconstructable
+agent/task state, they include `backend_state`, a restricted seed for cloning
+the captured deal, document, and workflow graph into a fresh isolated room.
+Resumed replay hydrates that graph during PREPARE, initializes extraction in
+Edit mode, remaps identifiers, restores chat/task state without a cold opener,
+and emits `snapshot_resumed` before normal execution. The source checkpoint is
+never mutated. Execution after resume remains a real backend run and may cause
+permitted test-environment side effects; microtests keep their existing offline
+runtime.
 
 Bundle status meanings:
 
@@ -543,7 +572,8 @@ timeline_assertions:
   when absence of that entire branch is acceptable.
 - Runtime states are `waiting`, `armed`, `passed`, `failed`, and `not_reached`.
 - Supported events: `user_said`, `agent_said`, `tool_called`,
-  `field_captured`, `trace_event`, `agent_handoff`, `call_ended`.
+  `field_captured`, `trace_event`, `agent_handoff`, `snapshot_resumed`,
+  `call_ended`.
 - Matchers may use `contains`, `equals`, `name`, `field`, `turn`,
   `with_arguments`, and nested `details`.
 

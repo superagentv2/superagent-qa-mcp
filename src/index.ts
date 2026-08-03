@@ -256,7 +256,7 @@ server.tool("qa_catalog_get", "Fetch the normalized QA catalog.", {}, async () =
 
 server.tool(
   "qa_catalog_search",
-  "Search normalized QA catalog rows.",
+  "Search normalized QA catalog rows. Rows expose start_mode and snapshot_path when a replay or microtest uses a checkpoint.",
   {
     q: z.string().optional(),
     testType: z.string().optional(),
@@ -299,7 +299,7 @@ server.tool(
 
 server.tool(
   "qa_definition_save",
-  "Save a YAML test definition with optimistic locking.",
+  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Snapshot-backed replays are checked for checkpoint compatibility and identity.",
   {
     testId: z.string(),
     yaml: z.string(),
@@ -316,7 +316,7 @@ server.tool(
 
 server.tool(
   "qa_lint_definition",
-  "Lint a YAML test definition draft.",
+  "Lint a YAML test definition draft. Snapshot-backed replays require explicit test_type replay and a current backend-bearing checkpoint; relative-path compatibility is fully checked again when the saved definition has a catalog path.",
   {
     yaml: z.string(),
     testType: z.string().default("replay"),
@@ -436,9 +436,9 @@ server.tool(
 
 server.tool(
   "qa_snapshot_bundle_create",
-  "Create a pending snapshot bundle with a replay recipe and no placeholder JSON artifact.",
+  "Create a pending snapshot bundle with a replay recipe and no placeholder JSON artifact. Generated checkpoints can be consumed by resumed replays or offline microtests.",
   {
-    path: z.string().default("simulations/microtests/snapshots"),
+    path: z.string().default("simulations/snapshots"),
     name: z.string(),
     recipeYaml: z.string().optional(),
   },
@@ -454,7 +454,7 @@ server.tool(
 
 server.tool(
   "qa_snapshot_bundle_get",
-  "Read a snapshot bundle, including its recipe, generated JSON, status, metadata, and consumers.",
+  "Read a snapshot bundle, including its recipe, generated JSON, status, metadata, and replay or microtest consumers.",
   { bundleId: z.string() },
   async ({ bundleId }) =>
     jsonText(await qa.get(`/eval/snapshot-bundles/${encode(bundleId)}`))
@@ -511,7 +511,7 @@ server.tool(
 
 server.tool(
   "qa_snapshot_generate",
-  "Start asynchronous snapshot generation from the saved recipe. Poll or cancel the returned job with the generic QA job tools.",
+  "Start asynchronous generation of a version 3 agent-and-backend checkpoint from the saved recipe. Poll or cancel the returned job with the generic QA job tools.",
   {
     bundleId: z.string(),
     cleanup: boolDefault(true),
@@ -536,7 +536,7 @@ server.tool(
 
 server.tool(
   "qa_file_move",
-  "Move a QA explorer file or folder.",
+  "Move a QA explorer file or folder and remap descendant paths, YAML references, managed snapshot paths, and path-based playlist ids.",
   {
     path: z.string(),
     destination: z.string(),
@@ -734,7 +734,7 @@ server.tool("qa_job_cancel", "Cancel one active QA runner job.", { jobId: z.stri
 
 server.tool(
   "qa_test_run",
-  "Run one API-runnable catalog test.",
+  "Run one API-runnable catalog test. Snapshot-backed replays report hydration and restoration through ordinary preparing job events; poll qa_job_get for progress.",
   {
     testId: z.string(),
     ...runOptionsSchema,

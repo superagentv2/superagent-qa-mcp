@@ -3,11 +3,29 @@
 ## Decide Test Type
 
 - Use replay when the behavior needs a real agent conversation and tool flow.
+  A replay may start fresh or resume from a generated version 3 checkpoint.
 - Use extraction when the target is backend extraction accuracy only.
-- Use micro-test when the bug is a narrow mid-call state, routing decision, or
-  one/few-turn behavior after a known snapshot.
+- Use micro-test when the bug is a narrow offline state, routing decision, or
+  one/few-turn behavior after a known snapshot and real backend continuation is
+  not the subject.
 - Use suite/profile when running an existing batch, not when authoring one new
   behavior.
+
+## Choose Fresh Or Resumed Replay
+
+Start fresh when initialization and the full lead-up are part of the behavior
+under test. Use a snapshot-backed replay when the assertion begins after a
+known checkpoint but must still exercise the real agent, tools, and backend.
+
+- Keep `test_type: replay` explicit.
+- Add one `snapshot` path relative to the replay YAML; do not combine it with
+  `seed_scenario`.
+- Require `format_version: 3` and `backend_state`.
+- Match `user_id`, `contract_type`, `mode`, and `mode_style` to the snapshot.
+- Expect PREPARE to clone and hydrate backend state into a fresh isolated room,
+  remap identifiers, and restore the saved runtime without a cold opener.
+- Treat `snapshot_resumed` as the handoff to ordinary replay execution and
+  inspect the saved `resume_context` during triage.
 
 ## Choose Replay User Mode
 
@@ -350,10 +368,11 @@ coverage tags, and stale/malformed YAML.
 
 ## Snapshot Bundle Authoring Checklist
 
-Use a managed snapshot when a micro-test needs a reproducible runtime state.
-The replay recipe is the source of truth; its JSON artifact is generated output.
+Use a managed snapshot when a resumed replay or offline micro-test needs a
+reproducible runtime state. The replay recipe is the source of truth; its JSON
+artifact is generated output.
 
-1. Define the smallest runtime state the micro-test must resume from. Do not
+1. Define the smallest runtime state the consumer must resume from. Do not
    capture an entire flow merely because it is convenient.
 2. Call `qa_files_tree_get` to choose the artifact folder and inspect existing
    snapshots/references.
@@ -374,8 +393,10 @@ The replay recipe is the source of truth; its JSON artifact is generated output.
 10. On failure, inspect job events/error and `qa_run_get` when a run ID was
    saved. Fix the recipe or environment rather than manufacturing a JSON shell
    merely to bypass capture validation.
-11. Link the artifact using a relative `snapshot` path in the consuming
-   micro-test, lint it, and run one calibration attempt.
+11. Link the artifact using a relative `snapshot` path in the consuming replay
+   or micro-test, lint it, and run one calibration attempt. A resumed replay
+   requires the generated version 3 backend seed; legacy artifacts remain
+   microtest-only.
 
 If the user explicitly chooses manual artifact authoring, call
 `qa_snapshot_artifact_save` with a complete runtime Snapshot JSON object. It can
@@ -394,13 +415,16 @@ Generation failures do not destroy the prior working artifact.
   includes `test_type` and valid schema.
 - Edit YAML through `GET|PUT /eval/tests/{test_id}/definition` when testing
   admin behavior; use file edits for repo maintenance.
-- Rename through `/eval/files/rename`; the runner remaps descendants, YAML
-  references, managed snapshot paths, and path-based playlist IDs. Move/delete
-  ordinary files through `/eval/files/*`, but do not use those two operations on
-  managed bundle artifacts until their coupled lifecycle support exists.
+- Rename or move through `/eval/files/rename` and `/eval/files/move`; the runner
+  remaps descendants, YAML references, managed snapshot paths, and path-based
+  playlist IDs transactionally. Generic delete is not bundle-aware, so do not
+  use it on a managed bundle artifact.
 - Before moving/deleting a snapshot, inspect `referenced_by` from
   `GET /eval/files/tree`.
-- When linking a snapshot to a micro-test, update the top-level `snapshot` key
-  with a relative path from the micro-test YAML folder.
-- After linking or moving, lint and run the micro-test because JSON shape alone
+- When linking a snapshot to a replay or micro-test, update the top-level
+  `snapshot` key with a relative path from the consumer YAML folder.
+- After linking or moving, lint and run the consumer because JSON shape alone
   does not prove snapshot compatibility.
+- Backend hydration is isolated from the captured source graph, but resumed
+  replay execution is real and may cause allowed test-environment side effects.
+  Use synthetic identities and safe delivery targets.

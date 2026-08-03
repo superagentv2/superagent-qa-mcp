@@ -49,6 +49,7 @@ Main current endpoints in `runner_api.py`:
 - `GET /eval/snapshot-bundles/{bundle_id}`
 - `POST /eval/snapshot-bundles/{bundle_id}/recipe/validate`
 - `PUT /eval/snapshot-bundles/{bundle_id}/recipe`
+- `PUT /eval/snapshot-bundles/{bundle_id}/artifact`
 - `POST /eval/snapshot-bundles/{bundle_id}/generate`
 - `PATCH /eval/files/rename`
 - `PATCH /eval/files/move`
@@ -209,7 +210,7 @@ Explorer item kinds:
 
 - `folder`: a directory under `simulations/`.
 - `test`: `.yaml` / `.yml` definition.
-- `snapshot`: `.json` fixture used by micro-tests.
+- `snapshot`: `.json` checkpoint used by resumed replays or offline micro-tests.
 
 File operations:
 
@@ -227,12 +228,12 @@ The file tree response includes reference metadata plus managed snapshot
 or deleting snapshots or seed scenarios. The frontend warning is advisory;
 Codex should still inspect the references and explain the consequence.
 
-Rename is coordinated across the explorer tree: folder descendants, YAML
-`snapshot`/`seed_scenario` references, managed bundle artifact paths, and
-path-based playlist IDs are remapped, and the response includes
-`renamed_from`, `renamed_to`, and `test_id_updates`. Generic move/delete remain
-non-bundle-aware; do not use them on managed bundle artifacts because they can
-separate JSON from its hidden recipe and generation metadata.
+Rename and move are coordinated across the explorer tree: folder descendants,
+YAML `snapshot`/`seed_scenario` references, managed bundle artifact paths, and
+path-based playlist IDs are remapped transactionally. Rename responses include
+`renamed_from`/`renamed_to`; move responses include `moved_from`/`moved_to`;
+both report `test_id_updates`. Generic delete remains non-bundle-aware; do not
+use it on managed bundle artifacts because it can separate lifecycle metadata.
 
 ## Safe Run Dispatchers
 
@@ -292,7 +293,7 @@ Workbench with:
   advanced-edit mode. A pending bundle exposes **Create manually**, which opens
   the same JSON editor without running generation.
 - Bundle metadata: recipe/snapshot hashes, generation time and run, deployment,
-  manifest, capture gate, and consuming micro-tests.
+  manifest, capture gate, and consuming replays or micro-tests.
 - Generation telemetry: queued, recipe, replay, validate, persist, and ready
   phases, live runtime events, cancellation, and a collapsible monitor.
 
@@ -306,18 +307,31 @@ The recipe is the source of truth. Advanced JSON edits and manually created
 artifacts are validated against the runtime Snapshot model and mark the bundle
 manually modified; regenerating warns before atomically replacing those changes.
 
-A micro-test links one generated snapshot with top-level YAML:
+A replay or micro-test links one generated snapshot with top-level YAML:
 
 ```yaml
-test_type: microtest
+test_type: replay
 snapshot: ../snapshots/example.json
 ```
 
-The `snapshot` path is resolved relative to the micro-test YAML file. The admin
-UI provides Add Snapshot from the right rail/context menu for editable
+The `snapshot` path is resolved relative to the consumer YAML file. The admin UI
+provides Add Snapshot from the right rail/context menu for editable replays and
 micro-tests; that action writes/replaces the YAML `snapshot` key and saves the
-definition. After linking, lint and run the micro-test: successful generation
-proves artifact validity, not compatibility with every consumer.
+definition. After linking, lint and run the consumer: successful generation
+proves artifact validity, not compatibility with every replay or microtest.
+
+Catalog rows expose `start_mode` and `snapshot_path` for checkpoint consumers.
+A replay consumer requires a version 3 artifact with `backend_state`, matching
+`user_id`, `contract_type`, `mode`, and `mode_style`, and cannot also use
+`seed_scenario`. During a resumed replay, Run Studio keeps the job in PREPARE
+while the runner creates a fresh room, hydrates cloned backend state,
+initializes extraction in Edit mode, remaps identifiers, and restores the saved
+task/chat context. `snapshot_resumed` marks normal execution; saved reports
+expose `resume_context`. Microtests keep their existing fast offline path.
+
+The cloned backend graph isolates the source checkpoint from mutation, but the
+resumed replay itself uses real tools and backend behavior. Treat permitted
+external actions as real test-environment side effects.
 
 ## Lifecycle
 

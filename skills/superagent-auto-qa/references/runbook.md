@@ -81,6 +81,22 @@ python evaluate.py replay simulations/regressions/cross-flow/ACT-flat-cash-happy
 Use `--live` for human-readable turn output. Use `--save-log` for JSON/Markdown
 artifacts under `artifacts/eval-runs/`.
 
+A replay with a top-level relative `snapshot` path uses the same command and
+admin/MCP dispatcher. There is no separate resume command:
+
+```yaml
+test_type: replay
+snapshot: ../snapshots/purchase-review-ready.json
+```
+
+Require a version 3 artifact with `backend_state`, matching `user_id`,
+`contract_type`, `mode`, and `mode_style`; do not combine it with
+`seed_scenario`. In an API run, poll PREPARE events for checkpoint loading,
+fresh-room backend hydration, Edit initialization, ID remapping, and runtime
+restoration. `snapshot_resumed` marks entry into ordinary execution, and the
+saved report records `resume_context`. A failure before that event is a resume
+setup failure, not an assertion failure.
+
 ## Extraction
 
 ```bash
@@ -117,6 +133,13 @@ validation, artifact persistence, and completion. A successful job is not the
 only acceptance signal: require `generation_status: ready` and
 `artifact_available: true` from the refreshed bundle.
 
+New generation emits version 3 checkpoints with both reconstructable agent
+state and restricted backend hydration state. These artifacts can feed resumed
+replays or offline microtests. Legacy versions 1 and 2 remain microtest-only.
+The source snapshot is never mutated during replay hydration, but continued
+replay uses real tools and backend behavior; use synthetic users and safe test
+destinations.
+
 For a failed generation:
 
 - Read the job `error`, events, room/user metadata, and `run_id`.
@@ -127,6 +150,10 @@ For a failed generation:
   safely serializable or was an unsupported agent state.
 - Fatal initialization or missing runtime-state errors mean the candidate was
   rejected after capture validation.
+- Resumed replay identity errors mean the consumer and snapshot disagree on
+  user, contract type, mode, or mode style.
+- Backend hydration or Edit initialization errors belong to PREPARE; inspect
+  the job events and `resume_context` before changing test assertions.
 - Correct the recipe/environment and retry. The last valid JSON remains in
   place after failure.
 
