@@ -167,12 +167,21 @@ storage format. Lint and inspect one calibration run before review. See
 9. Link the generated artifact from a micro-test using a path relative to that
    micro-test YAML, then lint and run the consuming micro-test.
 
+When the user explicitly requests a manual artifact instead of generation,
+call `qa_snapshot_artifact_save` with a complete runtime snapshot JSON object.
+This works for a pending bundle with no artifact and for an existing artifact,
+validates the runtime Snapshot model, and marks the bundle `manually_modified`.
+Fetch the bundle first and pass its `snapshot_hash` as `expectedHash` when an
+artifact already exists. Generation remains the preferred reproducible path and
+will replace the manual artifact after confirmation.
+
 Bundle statuses are `never_generated`, `generating`, `ready`, `stale`,
 `generation_failed`, and `manually_modified`; unmanaged existing JSON is
-`legacy`. A stale bundle needs regeneration. Raw JSON edits through
-`qa_file_content_save` are an advanced escape hatch: they mark a managed bundle
-manually modified, may bypass runtime-model validation, and will be overwritten
-by regeneration. Warn before using it.
+`legacy`. A stale bundle needs regeneration. Use `qa_snapshot_artifact_save`
+for explicit managed-bundle overrides because it validates the runtime model.
+Raw edits through `qa_file_content_save` remain a lower-level escape hatch for
+existing files and may bypass runtime-model validation. Either form of manual
+editing is overwritten by regeneration; warn before using it.
 
 Use `qa_files_tree_get` before operations that affect references. Rename is
 coordinated: the runner remaps descendant paths, YAML `snapshot`/`seed_scenario`

@@ -262,9 +262,10 @@ fake_backend: {}
 ```
 
 Generated micro-tests must reference an approved existing snapshot. Managed
-snapshot JSON is generated from a replay recipe and is read-only by default in
-the browser. Advanced JSON editing is available, but marks the bundle manually
-modified and is not the normal authoring path.
+snapshot JSON normally comes from a replay recipe and is read-only by default
+in the browser. Advanced editing can also create an artifact for a pending
+bundle without generation. Manual saves validate the runtime Snapshot model,
+mark the bundle manually modified, and remain an exceptional authoring path.
 
 ## Snapshot Bundle Recipe YAML
 
@@ -356,7 +357,7 @@ Bundle status meanings:
 | `ready` | Artifact matches its recipe and recorded environment metadata. |
 | `stale` | Recipe, deployment, or manifest changed since generation. |
 | `generation_failed` | The latest generation attempt failed. |
-| `manually_modified` | Artifact hash differs from the generated hash. |
+| `manually_modified` | Artifact was created manually or differs from the generated hash. |
 
 ## Assertions
 

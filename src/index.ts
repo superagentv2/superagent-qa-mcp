@@ -489,6 +489,23 @@ server.tool(
         yaml,
         expected_hash: expectedHash,
       })
+  )
+);
+
+server.tool(
+  "qa_snapshot_artifact_save",
+  "Explicitly create or replace a managed snapshot JSON artifact by hand. The runner validates the runtime Snapshot model, marks the bundle manually modified, and regeneration will replace it. Use only when the user requests manual artifact editing.",
+  {
+    bundleId: z.string(),
+    content: z.string(),
+    expectedHash: optionalHash,
+  },
+  async ({ bundleId, content, expectedHash }) =>
+    jsonText(
+      await qa.put(`/eval/snapshot-bundles/${encode(bundleId)}/artifact`, {
+        content,
+        expected_hash: expectedHash,
+      })
     )
 );
 

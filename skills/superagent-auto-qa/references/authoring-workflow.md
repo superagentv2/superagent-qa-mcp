@@ -372,10 +372,17 @@ The replay recipe is the source of truth; its JSON artifact is generated output.
    available artifact. Inspect hashes, provenance, capture gate, source room,
    source user, and generation run before trusting it.
 10. On failure, inspect job events/error and `qa_run_get` when a run ID was
-    saved. Fix the recipe or environment; never manufacture or patch a JSON
-    shell to bypass capture validation.
+   saved. Fix the recipe or environment rather than manufacturing a JSON shell
+   merely to bypass capture validation.
 11. Link the artifact using a relative `snapshot` path in the consuming
-    micro-test, lint it, and run one calibration attempt.
+   micro-test, lint it, and run one calibration attempt.
+
+If the user explicitly chooses manual artifact authoring, call
+`qa_snapshot_artifact_save` with a complete runtime Snapshot JSON object. It can
+create the artifact for a pending bundle without a generation run, validates
+the runtime model, and returns `manually_modified`. Fetch the bundle first and
+use its `snapshot_hash` as `expectedHash` when replacing an existing artifact.
+This is an advanced override, not a way to conceal a broken capture recipe.
 
 Regenerate when the bundle is `stale`. Treat `manually_modified` as divergence:
 report it and obtain confirmation before generation replaces manual JSON edits.

@@ -289,7 +289,8 @@ Workbench with:
 - Replay Recipe: editable YAML, real-time validation/lint diagnostics, capture
   gate, save, and Generate Snapshot.
 - Snapshot JSON: the generated artifact, read-only by default with an explicit
-  advanced-edit mode.
+  advanced-edit mode. A pending bundle exposes **Create manually**, which opens
+  the same JSON editor without running generation.
 - Bundle metadata: recipe/snapshot hashes, generation time and run, deployment,
   manifest, capture gate, and consuming micro-tests.
 - Generation telemetry: queued, recipe, replay, validate, persist, and ready
@@ -301,8 +302,9 @@ generate the artifact. Generation is a normal asynchronous QA job and can be
 polled or canceled through the generic job endpoints. Failed generation records
 diagnostics and preserves the previous working artifact.
 
-The recipe is the source of truth. Advanced JSON edits mark the bundle manually
-modified; regenerating warns before atomically replacing those changes.
+The recipe is the source of truth. Advanced JSON edits and manually created
+artifacts are validated against the runtime Snapshot model and mark the bundle
+manually modified; regenerating warns before atomically replacing those changes.
 
 A micro-test links one generated snapshot with top-level YAML:
 
