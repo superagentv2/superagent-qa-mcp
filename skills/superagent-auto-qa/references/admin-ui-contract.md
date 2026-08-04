@@ -108,7 +108,7 @@ sections:
         summary: Purchase new init collects listing/address, financing, dump, then initializes.
         priority: p1
         required_evidence:
-          - test_type: replay
+          - test_type: e2e
         legacy_status: Covered
         detailed_description: Purchase initialization must collect listing/address, financing, and dump details before initialization.
         next_action: Add mind-change case.
@@ -124,7 +124,7 @@ Required fields:
 Optional requirement fields:
 
 - `priority`;
-- `required_evidence`, with entries such as `{test_type: replay}`;
+- `required_evidence`, with entries such as `{test_type: e2e}`;
 - `legacy_status`, retained from the old matrix as context only;
 - `detailed_description`, narrative requirement context only;
 - `next_action`;
@@ -133,7 +133,7 @@ Optional requirement fields:
 Tests claim requirements through top-level YAML `covers`:
 
 ```yaml
-test_type: replay
+test_type: e2e
 jira: ACT-flat-cash-happy
 covers:
   - INIT-002
@@ -210,7 +210,7 @@ Explorer item kinds:
 
 - `folder`: a directory under `simulations/`.
 - `test`: `.yaml` / `.yml` definition.
-- `snapshot`: `.json` checkpoint used by resumed replays or offline micro-tests.
+- `snapshot`: `.json` checkpoint used by Checkpoint E2E tests or offline micro-tests.
 
 File operations:
 
@@ -239,7 +239,7 @@ use it on managed bundle artifacts because it can separate lifecycle metadata.
 
 `POST /eval/tests/{test_id}/run` only dispatches known-safe test runners:
 
-- replay + `parallel-replay-runner`
+- E2E + `parallel-e2e-runner`
 - extraction + `evaluate-extraction` or `eval-suite-golden-extraction`
 - microtest + `parallel-micro-runner`
 - suite/profile rows
@@ -287,14 +287,14 @@ not appear in normal test catalog, coverage, playlist, or lifecycle actions.
 Selecting one in the Catalog exposes its bundle status and opens Snapshot
 Workbench with:
 
-- Replay Recipe: editable YAML, real-time validation/lint diagnostics, capture
+- Snapshot Recipe: editable YAML, real-time validation/lint diagnostics, capture
   gate, save, and Generate Snapshot.
 - Snapshot JSON: the generated artifact, read-only by default with an explicit
   advanced-edit mode. A pending bundle exposes **Create manually**, which opens
   the same JSON editor without running generation.
 - Bundle metadata: recipe/snapshot hashes, generation time and run, deployment,
-  manifest, capture gate, and consuming replays or micro-tests.
-- Generation telemetry: queued, recipe, replay, validate, persist, and ready
+  manifest, capture gate, and consuming E2E tests or micro-tests.
+- Generation telemetry: queued, recipe, E2E, validate, persist, and ready
   phases, live runtime events, cancellation, and a collapsible monitor.
 
 The workbench reports `legacy`, `never_generated`, `generating`, `ready`,
@@ -307,33 +307,33 @@ The recipe is the source of truth. Advanced JSON edits and manually created
 artifacts are validated against the runtime Snapshot model and mark the bundle
 manually modified; regenerating warns before atomically replacing those changes.
 
-A replay or micro-test links one generated snapshot with top-level YAML:
+An E2E or micro-test links one generated snapshot with top-level YAML:
 
 ```yaml
-test_type: replay
+test_type: e2e
 snapshot: ../snapshots/example.json
 ```
 
 The `snapshot` path is resolved relative to the consumer YAML file. The admin UI
-provides Add Snapshot from the right rail/context menu for editable replays and
+provides Add Snapshot from the right rail/context menu for editable E2E tests and
 micro-tests; that action writes/replaces the YAML `snapshot` key and saves the
 definition. Existing-file lint requests include the selected catalog `test_id`,
 so live lint resolves relative snapshot paths from the real definition location
-and immediately checks artifact existence and replay identity compatibility.
+and immediately checks artifact existence and E2E identity compatibility.
 After linking, lint and run the consumer: successful generation proves artifact
-validity, not compatibility with every replay or microtest.
+validity, not compatibility with every E2E or microtest.
 
 Catalog rows expose `start_mode` and `snapshot_path` for checkpoint consumers.
-A replay consumer requires a version 3 artifact with `backend_state`, matching
+An E2E consumer requires a version 3 artifact with `backend_state`, matching
 `user_id`, `contract_type`, `mode`, and `mode_style`, and cannot also use
-`seed_scenario`. During a resumed replay, Run Studio keeps the job in PREPARE
+`seed_scenario`. During a Checkpoint E2E, Run Studio keeps the job in PREPARE
 while the runner creates a fresh room, hydrates cloned backend state,
 initializes extraction in Edit mode, remaps identifiers, and restores the saved
-task/chat context. `snapshot_resumed` marks normal execution; saved reports
+task/chat context. `checkpoint_restored` marks normal execution; saved reports
 expose `resume_context`. Microtests keep their existing fast offline path.
 
 The cloned backend graph isolates the source checkpoint from mutation, but the
-resumed replay itself uses real tools and backend behavior. Treat permitted
+Checkpoint E2E itself uses real tools and backend behavior. Treat permitted
 external actions as real test-environment side effects.
 
 ## Lifecycle

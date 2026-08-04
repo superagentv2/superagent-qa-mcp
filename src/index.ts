@@ -256,7 +256,7 @@ server.tool("qa_catalog_get", "Fetch the normalized QA catalog.", {}, async () =
 
 server.tool(
   "qa_catalog_search",
-  "Search normalized QA catalog rows. Rows expose start_mode and snapshot_path when a replay or microtest uses a checkpoint.",
+  "Search normalized QA catalog rows. Rows expose start_mode and snapshot_path when an E2E test or microtest uses a checkpoint.",
   {
     q: z.string().optional(),
     testType: z.string().optional(),
@@ -299,7 +299,7 @@ server.tool(
 
 server.tool(
   "qa_definition_save",
-  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Snapshot-backed replays are checked for checkpoint compatibility and identity.",
+  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Checkpoint E2E definitions are checked for snapshot compatibility and identity.",
   {
     testId: z.string(),
     yaml: z.string(),
@@ -319,7 +319,7 @@ server.tool(
   "Lint a YAML test definition draft. Pass testId when editing an existing catalog test so relative snapshot paths and captured identity are checked immediately against that file's location.",
   {
     yaml: z.string(),
-    testType: z.string().default("replay"),
+    testType: z.string().default("e2e"),
     jurisdictionCode: z.string().default("AZ"),
     testId: z.string().optional(),
   },
@@ -339,7 +339,7 @@ server.tool(
   "Generate a manifest-grounded draft from natural language.",
   {
     description: z.string(),
-    testType: z.string().default("replay"),
+    testType: z.string().default("e2e"),
     contractType: z.string().default("purchase"),
     jurisdictionCode: z.string().default("AZ"),
     model: z.string().optional(),
@@ -438,7 +438,7 @@ server.tool(
 
 server.tool(
   "qa_snapshot_bundle_create",
-  "Create a pending snapshot bundle with a replay recipe and no placeholder JSON artifact. Generated checkpoints can be consumed by resumed replays or offline microtests.",
+  "Create a pending snapshot bundle with a snapshot recipe and no placeholder JSON artifact. Generated checkpoints can be consumed by Checkpoint E2E tests or offline microtests.",
   {
     path: z.string().default("simulations/snapshots"),
     name: z.string(),
@@ -456,7 +456,7 @@ server.tool(
 
 server.tool(
   "qa_snapshot_bundle_get",
-  "Read a snapshot bundle, including its recipe, generated JSON, status, metadata, and replay or microtest consumers.",
+  "Read a snapshot bundle, including its recipe, generated JSON, status, metadata, and E2E or microtest consumers.",
   { bundleId: z.string() },
   async ({ bundleId }) =>
     jsonText(await qa.get(`/eval/snapshot-bundles/${encode(bundleId)}`))
@@ -736,7 +736,7 @@ server.tool("qa_job_cancel", "Cancel one active QA runner job.", { jobId: z.stri
 
 server.tool(
   "qa_test_run",
-  "Run one API-runnable catalog test. Snapshot-backed replays report hydration and restoration through ordinary preparing job events; poll qa_job_get for progress.",
+  "Run one API-runnable catalog test. Checkpoint E2E tests report hydration and restoration through ordinary preparing job events; poll qa_job_get for progress.",
   {
     testId: z.string(),
     ...runOptionsSchema,
@@ -798,7 +798,7 @@ server.tool("qa_baselines_get", "Fetch eval baselines.", {}, async () => {
   return jsonText(await qa.get("/eval/baselines"));
 });
 
-server.tool("qa_scenarios_list", "List legacy replay scenarios.", {}, async () => {
+server.tool("qa_scenarios_list", "List E2E scenarios.", {}, async () => {
   return jsonText(await qa.get("/eval/scenarios"));
 });
 
@@ -828,7 +828,7 @@ server.tool(
 
 server.tool(
   "qa_scenario_run",
-  "Run a legacy replay scenario.",
+  "Run an E2E scenario.",
   {
     scenarioId: z.string(),
     cleanup: boolDefault(true),

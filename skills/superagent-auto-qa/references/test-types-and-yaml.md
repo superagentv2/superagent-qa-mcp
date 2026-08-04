@@ -4,7 +4,7 @@
 
 The `/admin/qa` workbench centers on these normalized catalog test types:
 
-- `replay`: fresh or snapshot-backed voice-agent regression scenarios.
+- `E2E`: fresh or snapshot-backed voice-agent regression scenarios.
 - `extraction`: isolated backend extraction fixtures.
 - `microtest`: snapshot resume tests.
 - `suite`: curated eval suites from `evaluate.py eval-suite`.
@@ -20,7 +20,7 @@ surface.
 New and edited YAML definitions should declare their semantic type explicitly:
 
 ```yaml
-test_type: replay      # replay | extraction | microtest
+test_type: e2e      # e2e | extraction | microtest
 ```
 
 The filesystem path is now an organization choice, not the source of truth. QA
@@ -34,7 +34,7 @@ prefer. The runner classifies definitions in this order:
 4. Legacy path fallback only.
 
 Do not rely on folder names to decide test behavior. Moving a micro-test into a
-team folder must not turn it into a replay. If `test_type` contradicts the
+team folder must not turn it into an E2E. If `test_type` contradicts the
 editor or runner type, the admin API should reject the save or lifecycle change.
 
 ## Shared Metadata
@@ -42,10 +42,10 @@ editor or runner type, the admin API should reject the save or lifecycle change.
 Prefer these metadata fields on new or migrated definitions:
 
 ```yaml
-test_type: replay      # replay | extraction | microtest
+test_type: e2e      # e2e | extraction | microtest
 qa_status: draft        # draft | reviewed | promoted | archived
 source_trace: manual-draft
-jira: QA-SHORT-ID       # replay and microtest
+jira: QA-SHORT-ID       # E2E and microtest
 id: QA-SHORT-ID         # extraction
 authored_by: qa-admin
 notes: Human-readable intent and review notes.
@@ -66,14 +66,14 @@ QA-specific Codex extraction path. Use `ai_provider: live` only when the user
 explicitly requests the Live API path. Do not omit the field: omission selects
 the backend's Live API default. `openai` is not a valid value.
 
-## Replay Regression YAML
+## E2E Regression YAML
 
-Schema source: `core/testing/regression_scenario.py::RegressionScenario`.
+Schema source: `core/testing/e2e_scenario.py::E2EScenario`.
 
 Important fields:
 
 ```yaml
-test_type: replay
+test_type: e2e
 source_trace: evaluation-plan
 qa_status: draft
 jira: ACT-example
@@ -118,8 +118,8 @@ expected_fields:
 max_turns: 60
 ```
 
-Use `user_mode: simulated` unless exact phrasing matters. Use `user_mode:
-replay` only for literal transcript/utterance-sensitive paths.
+Use `user_mode: simulated` unless exact phrasing matters. Use
+`user_mode: scripted` only for literal transcript/utterance-sensitive paths.
 
 In simulated mode:
 
@@ -133,17 +133,17 @@ In simulated mode:
   repeating information already communicated.
 - `matches_questions` is never provided to the simulated-user LLM.
 
-In literal replay mode, the executor uses `matches_questions` to select an
+In scripted execution mode, the executor uses `matches_questions` to select an
 intent and emits its `original_line` verbatim. Include matcher phrases only
-when `user_mode: replay` needs them; omit them from simulated-mode definitions
-unless the same fixture intentionally supports literal replay as well.
+when `user_mode: scripted` needs them; omit them from simulated-mode definitions
+unless the same fixture intentionally supports scripted execution as well.
 
-A replay starts a fresh conversation by default. To continue from known
+An E2E starts a fresh conversation by default. To continue from known
 mid-call state while exercising the real voice-agent loop, tools, and backend,
 add a generated snapshot:
 
 ```yaml
-test_type: replay
+test_type: e2e
 contract_type: purchase
 mode: Edit
 mode_style: fast
@@ -152,18 +152,18 @@ user_id: user_real_target_environment_id
 snapshot: ../snapshots/purchase-review-ready.json
 ```
 
-The path is relative to the replay YAML. Snapshot-backed replay requires a
+The path is relative to the E2E YAML. Checkpoint E2E requires a
 version 3 artifact with `backend_state`; versions 1 and 2 remain valid only for
-offline microtests. The replay and checkpoint must match on `user_id`,
+offline microtests. The E2E and checkpoint must match on `user_id`,
 `contract_type`, `mode`, and `mode_style`. `snapshot` and `seed_scenario` are
 mutually exclusive because both define initial state. Use a micro-test instead
 when fast offline behavior is the intended subject.
 
-Do not assume that adding `fake_backend` to replay YAML activates offline
-execution. In the current hosted MCP/UI execution path, replays use the real
+Do not assume that adding `fake_backend` to E2E YAML activates offline
+execution. In the current hosted MCP/UI execution path, E2E tests use the real
 backend; fake-backend configuration is consumed only when the runner is
 explicitly started in offline mode. Treat real backend writes and queued
-external actions as intentional side effects when reviewing a replay.
+external actions as intentional side effects when reviewing an E2E.
 
 ## Extraction Fixture YAML
 
@@ -198,7 +198,7 @@ forbidden_fields: {}
 Use extraction fixtures when testing backend extraction only. They do not test
 voice-agent routing, conversation policy, or tool orchestration.
 
-For replay and extraction tests, replace `REPLACE_WITH_VALID_USER_ID` with a
+For E2E and extraction tests, replace `REPLACE_WITH_VALID_USER_ID` with a
 real user ID from the backend environment where the test will run. Draft lint
 checks the ID through the backend QA validation endpoint. A missing user is a
 blocking lint error; an unavailable validation service is a warning while
@@ -248,7 +248,7 @@ pattern.
 
 ## Micro-Test YAML
 
-Schema source: `core/testing/regression_scenario.py::MicroTestFixture`.
+Schema source: `core/testing/e2e_scenario.py::MicroTestFixture`.
 
 ```yaml
 test_type: microtest
@@ -280,15 +280,15 @@ fake_backend: {}
 ```
 
 Generated micro-tests must reference an approved existing snapshot. Managed
-snapshot JSON normally comes from a replay recipe and is read-only by default
+snapshot JSON normally comes from a snapshot recipe and is read-only by default
 in the browser. Advanced editing can also create an artifact for a pending
 bundle without generation. Manual saves validate the runtime Snapshot model,
 mark the bundle manually modified, and remain an exceptional authoring path.
 
 ## Snapshot Bundle Recipe YAML
 
-A managed snapshot is a bundle containing a hidden replay recipe, its generated
-JSON artifact, generation metadata, and references from consuming replays or
+A managed snapshot is a bundle containing a hidden snapshot recipe, its generated
+JSON artifact, generation metadata, and references from consuming E2E tests or
 micro-tests.
 The recipe is the source of truth; the JSON is a replaceable build artifact.
 Recipes are infrastructure, not runnable QA tests, and do not participate in
@@ -310,7 +310,7 @@ snapshot_capture:
     field: geographical_area
   capture_at: end_of_turn
 
-test_type: replay
+test_type: e2e
 qa_status: draft
 jira: SNAPSHOT-PURCHASE-AFTER-AREA
 title: Purchase state after geographical area
@@ -339,7 +339,7 @@ max_turns: 40
   runtime evidence.
 - Combining both requires the event and active runtime state to agree.
 - `capture_at` currently only accepts `end_of_turn`: the triggering turn is
-  allowed to complete, then the resulting runtime state is captured and replay
+  allowed to complete, then the resulting runtime state is captured and E2E
   stops.
 
 Supported `active_task.kind` values are:
@@ -369,9 +369,9 @@ Failure therefore leaves the previous working artifact untouched.
 New generated artifacts use `format_version: 3`. Alongside reconstructable
 agent/task state, they include `backend_state`, a restricted seed for cloning
 the captured deal, document, and workflow graph into a fresh isolated room.
-Resumed replay hydrates that graph during PREPARE, initializes extraction in
+Checkpoint E2E hydrates that graph during PREPARE, initializes extraction in
 Edit mode, remaps identifiers, restores chat/task state without a cold opener,
-and emits `snapshot_resumed` before normal execution. The source checkpoint is
+and emits `checkpoint_restored` before normal execution. The source checkpoint is
 never mutated. Execution after resume remains a real backend run and may cause
 permitted test-environment side effects; microtests keep their existing offline
 runtime.
@@ -380,7 +380,7 @@ Bundle status meanings:
 
 | Status | Meaning |
 | --- | --- |
-| `legacy` | Existing unmanaged JSON without a replay recipe. |
+| `legacy` | Existing unmanaged JSON without a snapshot recipe. |
 | `never_generated` | Recipe exists, but no successful artifact exists yet. |
 | `generating` | A generation job is queued or running. |
 | `ready` | Artifact matches its recipe and recorded environment metadata. |
@@ -547,7 +547,7 @@ promoted tests.
 
 ### Timeline assertion contract
 
-Timeline assertions run during replay and microtests. They observe the
+Timeline assertions run during E2E and microtests. They observe the
 conversation but never steer the voice agent or test user.
 
 ```yaml
@@ -572,7 +572,7 @@ timeline_assertions:
   when absence of that entire branch is acceptable.
 - Runtime states are `waiting`, `armed`, `passed`, `failed`, and `not_reached`.
 - Supported events: `user_said`, `agent_said`, `tool_called`,
-  `field_captured`, `trace_event`, `agent_handoff`, `snapshot_resumed`,
+  `field_captured`, `trace_event`, `agent_handoff`, `checkpoint_restored`,
   `call_ended`.
 - Matchers may use `contains`, `equals`, `name`, `field`, `turn`,
   `with_arguments`, and nested `details`.
@@ -635,11 +635,11 @@ Use `before: {event: user_said}` when an expected response must occur before
 the next caller turn. Omit `before` for a prohibition that should remain active
 until the call ends.
 
-The replay executor will not inject another simulated caller turn when the
+The E2E executor will not inject another simulated caller turn when the
 assistant has produced no correlated response. That condition fails the run as
 a harness timing/error instead of manufacturing two consecutive caller turns.
 
-For voice-focused replays, prefer stable observable evidence: required tool
+For voice-focused E2E tests, prefer stable observable evidence: required tool
 invocation, agent acknowledgement, phase transition, and terminal call
 behavior. Do not assert external provider delivery unless delivery itself is
 the behavior under test.

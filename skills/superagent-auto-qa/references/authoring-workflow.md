@@ -2,8 +2,8 @@
 
 ## Decide Test Type
 
-- Use replay when the behavior needs a real agent conversation and tool flow.
-  A replay may start fresh or resume from a generated version 3 checkpoint.
+- Use E2E when the behavior needs a real agent conversation and tool flow.
+  An E2E may start fresh or resume from a generated version 3 checkpoint.
 - Use extraction when the target is backend extraction accuracy only.
 - Use micro-test when the bug is a narrow offline state, routing decision, or
   one/few-turn behavior after a known snapshot and real backend continuation is
@@ -11,23 +11,23 @@
 - Use suite/profile when running an existing batch, not when authoring one new
   behavior.
 
-## Choose Fresh Or Resumed Replay
+## Choose Fresh Or Checkpoint E2E
 
 Start fresh when initialization and the full lead-up are part of the behavior
-under test. Use a snapshot-backed replay when the assertion begins after a
+under test. Use a checkpoint E2E when the assertion begins after a
 known checkpoint but must still exercise the real agent, tools, and backend.
 
-- Keep `test_type: replay` explicit.
-- Add one `snapshot` path relative to the replay YAML; do not combine it with
+- Keep `test_type: e2e` explicit.
+- Add one `snapshot` path relative to the E2E YAML; do not combine it with
   `seed_scenario`.
 - Require `format_version: 3` and `backend_state`.
 - Match `user_id`, `contract_type`, `mode`, and `mode_style` to the snapshot.
 - Expect PREPARE to clone and hydrate backend state into a fresh isolated room,
   remap identifiers, and restore the saved runtime without a cold opener.
-- Treat `snapshot_resumed` as the handoff to ordinary replay execution and
+- Treat `checkpoint_restored` as the handoff to ordinary E2E execution and
   inspect the saved `resume_context` during triage.
 
-## Choose Replay User Mode
+## Choose E2E User Mode
 
 Prefer `user_mode: simulated`. It lets the caller answer the conversation that
 actually occurs instead of depending on brittle question substrings.
@@ -43,7 +43,7 @@ The executor supplies both an explicit goal and those intent hints to the
 simulated-user LLM. It never supplies `matches_questions`. Do not expect intent
 order or exact wording to control a simulated conversation.
 
-Use `user_mode: replay` only when exact caller wording or matcher-anchored
+Use `user_mode: scripted` only when exact caller wording or matcher-anchored
 sequencing is part of the behavior under test. In that mode,
 `matches_questions` selects the next intent and `original_line` is emitted
 verbatim.
@@ -65,13 +65,13 @@ The hosted MCP should be sufficient for normal test authoring:
 Examples of alternative evidence include captured fields, phase transitions,
 known tool calls, agent speech intent, and terminal call behavior.
 
-## Replay Backend And Side Effects
+## E2E Backend And Side Effects
 
-Current hosted MCP/UI replay execution uses the real backend. A `fake_backend`
+Current hosted MCP/UI E2E execution uses the real backend. A `fake_backend`
 mapping in YAML supplies fake responses only when the runner is explicitly
-started in offline mode; it does not switch a normal hosted replay offline.
+started in offline mode; it does not switch a normal hosted E2E offline.
 
-Before running a side-effecting replay:
+Before running a side-effecting E2E:
 
 - Establish whether real backend writes and queued actions are accepted.
 - Use unique synthetic identities, addresses, and recipient emails. Use a
@@ -91,7 +91,7 @@ through the manifest. The stable terminal sequence is:
 3. Assert an immediate sending/queued acknowledgement and the question asking
    whether the user wants to hang up.
 4. If the user agrees, assert `end_call`.
-5. Do not use delivery-provider success as the oracle for a voice-only replay.
+5. Do not use delivery-provider success as the oracle for a voice-only E2E.
 
 ## Manifest Grounding
 
@@ -110,7 +110,7 @@ manifest-grounded plan, compiles YAML, and lints before saving.
 
 ## Contract-Grounded Field Authoring
 
-For replay or extraction tests that assert contract fields, use three evidence
+For E2E or extraction tests that assert contract fields, use three evidence
 sources before drafting: the manifest, the database, and one calibration run.
 
 1. Fetch the manifest for the supported contract type, field names, value
@@ -155,14 +155,14 @@ Use `POST /eval/generate-scenario-draft` with:
 ```json
 {
   "description": "plain English test request",
-  "test_type": "replay",
+  "test_type": "e2e",
   "jurisdiction_code": "AZ"
 }
 ```
 
 Supported generation types normalize to:
 
-- `replay`
+- `e2e`
 - `extraction`
 - `microtest`
 
@@ -247,7 +247,7 @@ covers:
 The key is optional to YAML execution but operationally expected whenever a
 test protects a registered requirement. Fetch the current hosted requirements,
 use exact IDs, and include only requirements that the test's assertions prove.
-Broad happy-path replays may list multiple requirements, but completing a flow
+Broad happy-path E2E tests may list multiple requirements, but completing a flow
 does not automatically prove every requirement in that flow.
 
 Coverage status is computed by `scripts/qa_coverage_system.py` from
@@ -274,7 +274,7 @@ under unknown covers.
 
 - Do not create a test with no oracle.
 - Do not invent field names outside the manifest.
-- Do not use literal replay when simulated mode would be more stable.
+- Do not use scripted execution when simulated mode would be more stable.
 - Do not use `matches_questions` to steer simulated mode; the simulated-user
   LLM never receives them.
 - Do not promote generated YAML without review.
@@ -307,7 +307,7 @@ templates, latest `PUBLISHED` versions, and transformed pdfMe field definitions.
 Use `--require-business-schema` when authoring tests so Codex fails fast instead
 of accidentally relying on fallback fields.
 
-Definition linting also validates non-guest replay and extraction `user_id`
+Definition linting also validates non-guest E2E and extraction `user_id`
 values against the target backend. This is a separate privacy-safe lookup that
 returns existence only; it does not expose user records. Missing users block
 lint and execution. If the validation service is unavailable, lint reports a
@@ -351,10 +351,10 @@ coverage tags, and stale/malformed YAML.
 ## Hand-Authoring Checklist
 
 1. Choose `test_type` from the behavior being tested, not the target folder.
-2. For a replay, default to `user_mode: simulated`; use literal replay only
+2. For an E2E, default to `user_mode: simulated`; use scripted execution only
    when exact wording or matcher-anchored sequencing is essential.
 3. Fetch the manifest and select a valid `contract_type`.
-4. For contract-field replays and extractions, use the read-only database skill
+4. For contract-field E2E tests and extractions, use the read-only database skill
    and classify initial/prefilled, newly captured, and final state.
 5. Use manifest field names and evidence-grounded matchers in field assertions.
 6. Pick a stable deterministic oracle.
@@ -368,8 +368,8 @@ coverage tags, and stale/malformed YAML.
 
 ## Snapshot Bundle Authoring Checklist
 
-Use a managed snapshot when a resumed replay or offline micro-test needs a
-reproducible runtime state. The replay recipe is the source of truth; its JSON
+Use a managed snapshot when a Checkpoint E2E or offline micro-test needs a
+reproducible runtime state. The snapshot recipe is the source of truth; its JSON
 artifact is generated output.
 
 1. Define the smallest runtime state the consumer must resume from. Do not
@@ -378,7 +378,7 @@ artifact is generated output.
    snapshots/references.
 3. Create the pending bundle with `qa_snapshot_bundle_create`. Keep the returned
    `recipe_type`, `bundle_id`, and `snapshot_path` unchanged.
-4. Author the recipe as a normal replay using `ai_provider: codex` by default
+4. Author the recipe as a normal E2E using `ai_provider: codex` by default
    and a real user in the target backend environment.
 5. Prefer a semantic capture gate: use `active_task`, an `after` timeline event,
    or both. Do not use a fragile turn number. Capture occurs at end of turn.
@@ -393,10 +393,10 @@ artifact is generated output.
 10. On failure, inspect job events/error and `qa_run_get` when a run ID was
    saved. Fix the recipe or environment rather than manufacturing a JSON shell
    merely to bypass capture validation.
-11. Link the artifact using a relative `snapshot` path in the consuming replay
+11. Link the artifact using a relative `snapshot` path in the consuming E2E
    or micro-test. Lint an existing consumer with `qa_lint_definition` and its
    `testId` so the runner resolves that relative path and checks captured
-   identity immediately, then run one calibration attempt. A resumed replay
+   identity immediately, then run one calibration attempt. A Checkpoint E2E
    requires the generated version 3 backend seed; legacy artifacts remain
    microtest-only.
 
@@ -423,10 +423,10 @@ Generation failures do not destroy the prior working artifact.
   use it on a managed bundle artifact.
 - Before moving/deleting a snapshot, inspect `referenced_by` from
   `GET /eval/files/tree`.
-- When linking a snapshot to a replay or micro-test, update the top-level
+- When linking a snapshot to an E2E or micro-test, update the top-level
   `snapshot` key with a relative path from the consumer YAML folder.
 - After linking or moving, lint and run the consumer because JSON shape alone
   does not prove snapshot compatibility.
 - Backend hydration is isolated from the captured source graph, but resumed
-  replay execution is real and may cause allowed test-environment side effects.
+  E2E execution is real and may cause allowed test-environment side effects.
   Use synthetic identities and safe delivery targets.

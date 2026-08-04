@@ -1,6 +1,6 @@
 ---
 name: superagent-auto-qa
-description: "Use when working with SuperAgent automation QA through Codex: understanding the QA system, inspecting manifests, authoring or reviewing replay/extraction/microtest definitions and snapshot bundles, managing catalog files, lifecycle, linting, runs, jobs, coverage, requirements, or using the SuperAgent QA MCP tools."
+description: "Use when working with SuperAgent automation QA through Codex: understanding the QA system, inspecting manifests, authoring or reviewing E2E/extraction/microtest definitions and snapshot bundles, managing catalog files, lifecycle, linting, runs, jobs, coverage, requirements, or using the SuperAgent QA MCP tools."
 ---
 
 # SuperAgent Auto QA
@@ -58,15 +58,15 @@ For any non-trivial QA task:
   constraints.
 - **Catalog**: normalized view over tests, files, metadata, lifecycle,
   editability, runnability, references, and latest run status.
-- **Snapshot bundle**: one logical fixture composed of a hidden replay recipe,
+- **Snapshot bundle**: one logical fixture composed of a hidden snapshot recipe,
   optional generated JSON artifact, generation metadata, and references from
-  consuming replays or micro-tests.
-- **Snapshot recipe**: the replay and declarative capture gate that generate a
+  consuming E2E tests or micro-tests.
+- **Snapshot recipe**: the E2E and declarative capture gate that generate a
   snapshot. It is the source of truth, infrastructure rather than a runnable QA
   test, and excluded from normal catalog, coverage, playlist, and run actions.
 - **Snapshot artifact**: generated JSON runtime state. Current version 3
   artifacts contain reconstructable agent state plus a restricted backend
-  hydration seed and can start resumed replays or offline micro-tests. Legacy
+  hydration seed and can start Checkpoint E2E tests or offline micro-tests. Legacy
   versions 1 and 2 remain microtest-only. An artifact may not exist until the
   first successful generation.
 - **Capture gate**: an `active_task` matcher, timeline `after` matcher, or both;
@@ -77,23 +77,23 @@ For any non-trivial QA task:
 Prefer explicit YAML `test_type` for new and edited tests:
 
 ```yaml
-test_type: replay      # replay | extraction | microtest
+test_type: e2e      # e2e | extraction | microtest
 ```
 
 Folder path is organization, not identity. QA users can arrange files under
 `simulations/`; test type must come from explicit metadata or catalog semantics,
 not only from folder names.
 
-- **Replay**: runs the real voice-agent conversation loop. It starts fresh by
+- **E2E**: runs the real voice-agent conversation loop. It starts fresh by
   default or resumes from a generated version 3 checkpoint when `snapshot` is
   supplied.
 - **Extraction**: checks backend extraction behavior without the voice loop.
 - **Microtest**: uses snapshot state in the fast offline harness, injects turns,
   and asserts a narrow behavior without resuming the full backend conversation.
 
-### Replay User Driver Policy
+### E2E User Driver Policy
 
-Default authored replays to:
+Default authored E2E tests to:
 
 ```yaml
 user_mode: simulated
@@ -104,8 +104,8 @@ intent's `intent` name plus `original_line` as semantic conversation hints. It
 does not expose `matches_questions` to that LLM. The hints guide what the caller
 should communicate when relevant; they are not an ordered or literal script.
 
-Use `user_mode: replay` only when exact caller wording or matcher-anchored
-sequencing is itself required by the test. Literal replay consumes
+Use `user_mode: scripted` only when exact caller wording or matcher-anchored
+sequencing is itself required by the test. Scripted execution consumes
 `matches_questions` to select an intent and emits its `original_line` verbatim.
 
 ## QA AI Provider Policy
@@ -131,7 +131,7 @@ backend's Live API default. `openai` is not a valid QA value.
 4. `qa_draft_create`
 5. Review, then lifecycle tools only after lint is clean
 
-For replay or extraction tests that assert contract fields, also load
+For E2E or extraction tests that assert contract fields, also load
 `../superagent-admin-db/SKILL.md` and use its read-only workflow to inspect the
 active published template, field configuration, and relevant selected-user
 prefills. Classify each assertion as initial/prefilled, newly captured, or
@@ -153,10 +153,10 @@ storage format. Lint and inspect one calibration run before review. See
 2. Poll with `qa_job_get` / `qa_jobs_list`
 3. Inspect `qa_runs_list`, `qa_run_get`, and `qa_run_markdown_get`
 
-For a snapshot-backed replay, inspect the `preparing` job events before normal
+For a checkpoint E2E, inspect the `preparing` job events before normal
 execution. They expose snapshot loading, isolated backend hydration, identifier
-remapping, and runtime restoration. `snapshot_resumed` marks the transition into
-the ordinary replay loop; the saved report includes `resume_context`.
+remapping, and runtime restoration. `checkpoint_restored` marks the transition into
+the ordinary E2E loop; the saved report includes `resume_context`.
 
 **Create or regenerate a snapshot bundle**
 
@@ -176,22 +176,22 @@ the ordinary replay loop; the saved report includes `resume_context`.
    `generation_status: ready` and `artifact_available: true`.
 8. If generation fails, inspect job events/error and the saved generation
    `run_id` when available. The previous working artifact remains untouched.
-9. Link the generated artifact from a replay or micro-test using a path relative
+9. Link the generated artifact from an E2E or micro-test using a path relative
    to the consuming YAML, then lint and run that consumer.
 
-**Attach a snapshot to a replay**
+**Attach a snapshot to an E2E**
 
-1. Read the replay and snapshot bundle. Require explicit `test_type: replay`.
-2. Add a top-level `snapshot` path relative to the replay YAML. Do not combine
+1. Read the E2E and snapshot bundle. Require explicit `test_type: e2e`.
+2. Add a top-level `snapshot` path relative to the E2E YAML. Do not combine
    `snapshot` with `seed_scenario`.
 3. Require `format_version: 3` with `backend_state`. Version 1 or 2 artifacts are
    valid only for offline microtests.
-4. Match the replay's `user_id`, `contract_type`, `mode`, and `mode_style` to the
+4. Match the E2E's `user_id`, `contract_type`, `mode`, and `mode_style` to the
    captured snapshot identity.
 5. Lint, save with the latest optimistic hash, run through `qa_test_run`, and
-   poll `qa_job_get` through PREPARE and `snapshot_resumed`.
+   poll `qa_job_get` through PREPARE and `checkpoint_restored`.
 6. Inspect `resume_context` and the transcript/assertions in the saved run. A
-   resumed replay must not emit a cold-opening turn before continuing the saved
+   Checkpoint E2E must not emit a cold-opening turn before continuing the saved
    conversation.
 
 When the user explicitly requests a manual artifact instead of generation,
@@ -236,7 +236,7 @@ needs refreshed coverage.
 `covers` is optional to the YAML schema but expected on authored tests that
 protect registered requirements. Refresh the hosted requirements first, use
 exact requirement IDs, and claim only behavior that the test's assertions
-actually prove. A full-flow replay may cover multiple requirements.
+actually prove. A full-flow E2E may cover multiple requirements.
 
 ## Field Assertion Polarity
 
@@ -296,7 +296,7 @@ an assertion to advisory merely to obtain a passing result.
 - Never promote generated YAML without human review.
 - Do not weaken assertions just to make a run pass.
 - Do not guess pdfMe/contract field names; fetch the manifest.
-- Replay and extraction `user_id` values must identify a real user in the
+- E2E and extraction `user_id` values must identify a real user in the
   target backend environment. Never invent or retain a draft placeholder.
 - Snapshot recipes also require a real target-environment user. Never create a
   fake JSON shell; create a pending bundle and generate its artifact.
@@ -319,7 +319,7 @@ Load only the reference needed:
 - `references/test-types-and-yaml.md`: YAML shape, metadata, snapshot recipe
   schema/capture targets/statuses, assertions, and test-type differences.
 - `references/authoring-workflow.md`: authoring without codebase access,
-  database-grounded contract authoring, replay backend/side-effect policy,
+  database-grounded contract authoring, E2E backend/side-effect policy,
   snapshot generation/linking, review, promotion, and anti-patterns.
 - `references/admin-ui-contract.md`: admin QA UI/API semantics, catalog,
   filters, CRUD, lifecycle, explorer behavior, and Snapshot Workbench.

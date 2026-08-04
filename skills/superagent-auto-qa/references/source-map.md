@@ -11,8 +11,8 @@ Use this as the first code-navigation map for SuperAgent QA automation.
   `docs/evaluation/QA_AUTOMATION_ONBOARDING.md`
 - Regression/micro-test operator guide:
   `docs/REGRESSION_TESTS.md`
-- Replay authoring guide:
-  `docs/evaluation/HAPPY_PATH_REPLAY_GUIDE.md`
+- E2E authoring guide:
+  `docs/evaluation/E2E_TEST_GUIDE.md`
 - Assertion catalog:
   `docs/evaluation/QA_ASSERTION_CATALOG.md`
 - Eval tooling and profiles:
@@ -39,9 +39,9 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 
 - Runner API for admin UI: `runner_api.py`
 - Main CLI: `evaluate.py`
-- Replay and micro-test schema: `core/testing/regression_scenario.py`
+- E2E and micro-test schema: `core/testing/e2e_scenario.py`
 - Extraction schema: `core/testing/extraction_scenario.py`
-- Conversation runner, including resumed replay validation, hydration, ID
+- Conversation runner, including Checkpoint E2E validation, hydration, ID
   remapping, and runtime restoration: `core/testing/conversation_runner.py`
 - Snapshot runtime model and capture/restore support:
   `core/testing/snapshot.py`
@@ -54,7 +54,7 @@ Use this as the first code-navigation map for SuperAgent QA automation.
   `core/testing/qa_assertion_catalog.yaml`
 - Field assertions: `core/testing/field_assertions.py`
 - Simulated caller: `core/testing/simulated_user.py`
-- Literal replay user: `core/testing/intent_driven_user.py`
+- Scripted execution user: `core/testing/intent_user.py`
 - Fake backend for offline micro-tests: `core/testing/fake_backend.py`
 - Coverage/catalog scanner: `scripts/audit_eval_coverage.py`
 - Requirements and coverage graph engine: `scripts/qa_coverage_system.py`
@@ -63,8 +63,8 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 
 - YAML tests may live anywhere under `simulations/`; explicit YAML
   `test_type` is the semantic source of truth for new/edited files.
-- Legacy replay/regression YAML: `simulations/regressions/**/*.yaml`
-- Generated replay drafts: `simulations/regressions/generated/*.yaml`
+- Legacy E2E/regression YAML: `simulations/regressions/**/*.yaml`
+- Generated E2E drafts: `simulations/regressions/generated/*.yaml`
 - Candidate imported calls: `simulations/regressions/candidates/*.yaml`
 - Known failing regressions: `simulations/regressions/known_failures/*.yaml`
 - Extraction fixtures: `simulations/extraction/**/*.yaml`
@@ -106,15 +106,15 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 - Use this for latest published pdfMe/schema-derived field names, contract
   types, addenda, and lifecycle/business values.
 
-## Backend Replay-State Support
+## Backend Checkpoint-State Support
 
-- Replay-state API controller:
-  `../superagentv_backend/src/main/java/org/compassv2/superagent/controllers/ReplayStateController.java`
+- Checkpoint-state API controller:
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/controllers/CheckpointStateController.java`
 - Export/hydration service:
-  `../superagentv_backend/src/main/java/org/compassv2/superagent/services/ReplayStateService.java`
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/services/CheckpointStateService.java`
 - Hydration/export request DTOs:
-  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/requests/ReplayStateHydrateRequest.java`,
-  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/requests/ReplayStateExportRequest.java`
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/requests/CheckpointStateHydrateRequest.java`,
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/requests/CheckpointStateExportRequest.java`
 - Hydration/backend-state responses:
-  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/responses/ReplayStateHydrateResponse.java`,
-  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/responses/ReplayBackendState.java`
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/responses/CheckpointStateHydrateResponse.java`,
+  `../superagentv_backend/src/main/java/org/compassv2/superagent/dto/responses/CheckpointBackendState.java`
