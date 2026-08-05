@@ -291,6 +291,21 @@ inside `expected_fields`, `forbidden_fields`, and
 blocking deterministic oracle in every reviewed or promoted test. Never change
 an assertion to advisory merely to obtain a passing result.
 
+## Alternative Agent Phrases After a User Request
+
+For a final assertion that requires an agent response after a user request, use
+`kind: agent_said_after_user` with `before` as the user-text anchor. Use `text`
+for one required phrase, or `any_of` for acceptable alternatives. `any_of` is a
+non-empty list of strings and passes if one alternative appears before the next
+user turn. Never supply both `text` and `any_of`; separate bug signatures are
+combined with AND, not OR.
+
+```yaml
+- kind: agent_said_after_user
+  before: send it for signature
+  any_of: [confirm the signer details, ready to send for signature]
+```
+
 ## Safety Rules
 
 - Never promote generated YAML without human review.

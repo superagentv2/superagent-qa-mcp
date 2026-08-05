@@ -401,6 +401,28 @@ Use:
 - extraction `expected_fields` and `expected_newly_captured` for extraction.
 - tool-call assertions when the behavior is observable as a tool call.
 
+### Alternative expected agent responses
+
+Use `agent_said_after_user` when the response must occur after a matching user
+turn. Its legacy `text` matcher accepts one required substring. When either of
+several stable phrasings is acceptable, use `any_of` instead. The assertion
+passes when at least one listed phrase appears in the agent messages after the
+anchored user turn and before the next user turn:
+
+```yaml
+bug_signature:
+  - id: signature-confirmation-after-request
+    kind: agent_said_after_user
+    before: send it for signature
+    any_of:
+      - confirm the signer details
+      - ready to send for signature
+```
+
+`text` and `any_of` are mutually exclusive. `any_of` must be a non-empty list
+of non-empty strings. Multiple separate bug signatures are AND assertions; use
+one `any_of` entry when the intended relationship is OR.
+
 ### Expected versus forbidden field assertions
 
 Both containers use the same inner matchers, but their polarity is opposite:
