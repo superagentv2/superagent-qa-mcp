@@ -98,11 +98,6 @@ field_data:
 intents:
   - intent: provide_purchase_price
     original_line: The purchase price is 700,000 dollars.
-bug_signature:
-  - kind: agent_did_not_ask_answered_field
-    field: purchase_price
-    matches_questions:
-      - purchase price
 timeline_assertions:
   - id: price-not-reasked-after-capture
     description: The agent does not ask for purchase price after it is captured
@@ -262,11 +257,6 @@ ai_provider: codex
 snapshot: snapshots/example-state.json
 user_turns:
   - "Yes, add that addendum."
-bug_signature:
-  - kind: agent_did_not_ask_answered_field
-    field: seller_compensation
-    matches_questions:
-      - seller compensation
 timeline_assertions:
   - id: no-reask-after-answer
     description: Seller compensation is not requested again after the answer
@@ -597,7 +587,7 @@ timeline_assertions:
   `field_captured`, `trace_event`, `agent_handoff`, `checkpoint_restored`,
   `call_ended`.
 - Matchers may use `contains`, `equals`, `name`, `field`, `turn`,
-  `with_arguments`, and nested `details`.
+  `contains_any`, `with_arguments`, and nested `details`.
 
 #### Matching semantics
 
@@ -605,6 +595,9 @@ All populated matcher keys are AND conditions.
 
 - `event` is an exact canonical event-type match.
 - `contains` is a case-insensitive substring of the event label.
+- `contains_any` is a list of case-insensitive substrings; at least one must
+  occur in the event label. It is useful when several phrasings would prove the
+  same event, such as a forbidden Buyer 2 prompt.
 - `equals` is a case-insensitive complete-label match.
 - `name` is a case-insensitive exact match against `details.name`, falling
   back to the label.
