@@ -116,6 +116,39 @@ max_turns: 60
 Use `user_mode: simulated` unless exact phrasing matters. Use
 `user_mode: scripted` only for literal transcript/utterance-sensitive paths.
 
+### Assertion expressions
+
+Every assertion family can use formulas in comparison operands: final-field
+matchers, bug-signature text/names/values/counts/tool arguments, and timeline
+matcher text/names/fields/turns/arguments/details. Expressions are structured
+YAML—not executable code—and resolve against final stored fields and the
+runner-frozen run timestamp. They can nest recursively.
+
+```yaml
+expected_fields:
+  commencement_date:
+    equals:
+      expr: format_date
+      value: {run: started_at}
+      format: yyyy-MM-dd
+  expiration_date:
+    equals:
+      expr: date_add
+      base: {field: commencement_date}
+      days: 30
+```
+
+Supported operands are literals, `{field: <name>}`, `{run: started_at|date}`,
+and expressions. Version 1 supports arithmetic, date add/subtract and format,
+conditionals, comparisons, boolean composition, concatenation, lowercase, and
+whitespace normalization. The linter rejects unknown operators, malformed or
+unknown field references, and nesting beyond 20 levels. A formula reads a
+final field; it does not make one assertion set or depend on another. Timeline
+formulas using final fields are evaluated by replaying the recorded event stream
+after final state is collected, while literal timeline assertions remain live.
+Keep structural selectors literal: `kind`, `event`, IDs, and metadata are not
+comparison operands.
+
 In simulated mode:
 
 - `goal` is the caller's primary objective.

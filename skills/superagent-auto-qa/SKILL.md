@@ -291,6 +291,35 @@ inside `expected_fields`, `forbidden_fields`, and
 blocking deterministic oracle in every reviewed or promoted test. Never change
 an assertion to advisory merely to obtain a passing result.
 
+## Assertion Expressions
+
+Every assertion family accepts expressions in its comparison operands: final
+field matcher operands (`equals`, `contains`, `equals_any`, and
+`absent_or_equals`), bug-signature text/names/values/counts/tool arguments,
+and timeline matcher text/names/fields/turns/arguments/details. Expressions
+are declarative data, never lambda functions or executable code. The runner
+freezes `run.started_at` once per run and resolves formulas from that value and
+the final contract field state.
+
+```yaml
+expected_fields:
+  expiration_date:
+    equals:
+      expr: date_add
+      base: {field: agreement_commencement_date}
+      days: 30
+```
+
+References are `{field: field_name}` and `{run: started_at|date}`. Operators
+include arithmetic, ISO-date operations, conditional logic, comparisons,
+boolean composition, and deterministic string normalization. Operands may nest
+up to 20 levels. Lint validates expression shape and field references; run
+artifacts record resolved operands. Timeline assertions that use final-field
+references are replayed against the recorded event stream once final fields are
+collected; ordinary timeline assertions still update live. Keep structural
+selectors literal: assertion `kind`, timeline `event`, IDs, and metadata select
+an evaluator rather than compare a value.
+
 ## Alternative Agent Phrases After a User Request
 
 For a final assertion that requires an agent response after a user request, use
