@@ -438,10 +438,15 @@ server.tool(
 
 server.tool(
   "qa_snapshot_bundle_create",
-  "Create a pending snapshot bundle with a snapshot recipe and no placeholder JSON artifact. Generated checkpoints can be consumed by Checkpoint E2E tests or offline microtests.",
+  "Create a pending snapshot bundle with a snapshot recipe and no placeholder JSON artifact. `path` must be an existing simulations folder; `name` must be the bare snapshot filename (for example, `bba-complete.json`), not a path. Generated checkpoints can be consumed by Checkpoint E2E tests or offline microtests.",
   {
-    path: z.string().default("simulations/snapshots"),
-    name: z.string(),
+    path: z
+      .string()
+      .default("simulations")
+      .describe("Existing folder under simulations/ where the snapshot artifact will live; do not include the filename."),
+    name: z
+      .string()
+      .describe("Bare snapshot filename, optionally ending in .json; do not include a folder path."),
     recipeYaml: z.string().optional(),
   },
   async ({ path, name, recipeYaml }) =>
