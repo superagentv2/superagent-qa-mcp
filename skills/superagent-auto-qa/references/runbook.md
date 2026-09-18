@@ -151,7 +151,12 @@ For a failed generation:
 - Fatal initialization or missing runtime-state errors mean the candidate was
   rejected after capture validation.
 - Checkpoint E2E identity errors mean the consumer and snapshot disagree on
-  user, contract type, mode, or mode style.
+  user, contract type, mode, or mode style. Contract types compare through the
+  manifest's supported aliases. Canonical `listing_contract` YAML is compatible
+  with runtime `listing`; if that pair alone is rejected, check that the runner
+  includes the alias compatibility fix. Do not rewrite generated runtime state
+  or weaken field assertions. No regeneration is required solely for this alias
+  fix; independently stale bundles still need normal regeneration.
 - Backend hydration or Edit initialization errors belong to PREPARE; inspect
   the job events and `resume_context` before changing test assertions.
 - Correct the recipe/environment and retry. The last valid JSON remains in

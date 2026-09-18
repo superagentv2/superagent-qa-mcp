@@ -245,7 +245,7 @@ server.tool("qa_health_get", "Check whether the QA runner API is reachable.", {}
 
 server.tool(
   "qa_manifest_get",
-  "Fetch the QA manifest used for generation and validation.",
+  "Fetch the QA manifest used for generation and validation, including canonical contract types, supported aliases, and checkpoint identity rules.",
   { jurisdictionCode: z.string().default("AZ") },
   async ({ jurisdictionCode }) => jsonText(await qa.get("/eval/manifest", { jurisdictionCode }))
 );
@@ -299,7 +299,7 @@ server.tool(
 
 server.tool(
   "qa_definition_save",
-  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Checkpoint E2E definitions are checked for snapshot compatibility and identity.",
+  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Checkpoint E2E compatibility uses supported contract-type aliases without changing captured runtime values; other identity checks remain unchanged.",
   {
     testId: z.string(),
     yaml: z.string(),
@@ -316,7 +316,7 @@ server.tool(
 
 server.tool(
   "qa_lint_definition",
-  "Lint a YAML test definition draft. Pass testId when editing an existing catalog test so relative snapshot paths and captured identity are checked immediately against that file's location.",
+  "Lint a YAML test definition draft. Pass testId when editing an existing catalog test so relative snapshot paths and captured identity are checked against that file's location. Contract-type aliases apply to field lookup and checkpoint identity: Listing YAML uses listing_contract, while runtime snapshots retain listing.",
   {
     yaml: z.string(),
     testType: z.string().default("e2e"),

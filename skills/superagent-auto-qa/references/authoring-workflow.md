@@ -22,6 +22,10 @@ known checkpoint but must still exercise the real agent, tools, and backend.
   `seed_scenario`.
 - Require `format_version: 3` and `backend_state`.
 - Match `user_id`, `contract_type`, `mode`, and `mode_style` to the snapshot.
+  Use canonical `listing_contract` in Listing YAML; runtime `listing` is its
+  supported alias for checkpoint comparison and field lookup. Preserve the
+  artifact's runtime value and all field assertions. See
+  `test-types-and-yaml.md` for the identity rules.
 - Expect PREPARE to clone and hydrate backend state into a fresh isolated room,
   remap identifiers, and restore the saved runtime without a cold opener.
 - Treat `checkpoint_restored` as the handoff to ordinary E2E execution and

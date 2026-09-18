@@ -123,6 +123,10 @@ generation replaces it.
    E2E YAML. Do not combine it with `seed_scenario`.
 3. Require a version 3 artifact with `backend_state`, and match `user_id`,
    `contract_type`, `mode`, and `mode_style` to the captured identity.
+   Contract types use the manifest's supported aliases: author Listing YAML as
+   `listing_contract`, while its runtime snapshot keeps `listing`. Field lookup
+   accepts the same aliases. Other identity checks are unchanged; missing or
+   genuinely different types still fail. Do not rewrite runtime snapshot values.
 4. Run `qa_lint_definition` with the E2E's `testId` so its relative snapshot
    path and captured identity are checked immediately. Save with
    `qa_definition_save`, then launch with the ordinary `qa_test_run` tool. No

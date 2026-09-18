@@ -24,6 +24,8 @@ For any non-trivial QA task:
 1. Call `qa_health_get` to confirm the QA runner is reachable.
 2. Call `qa_manifest_get` before choosing contract fields, tool names,
    assertion kinds, templates, addenda, suites, or lifecycle values.
+   Use its canonical contract types for YAML and its contract-type aliases
+   when interpreting captured runtime identity.
 3. Prefer `qa_catalog_search` for catalog discovery. Use filters/search terms
    whenever possible instead of fetching the whole catalog.
 4. Use `qa_files_tree_get` when the task is about folder/file structure,
@@ -187,12 +189,21 @@ the ordinary E2E loop; the saved report includes `resume_context`.
 3. Require `format_version: 3` with `backend_state`. Version 1 or 2 artifacts are
    valid only for offline microtests.
 4. Match the E2E's `user_id`, `contract_type`, `mode`, and `mode_style` to the
-   captured snapshot identity.
+   captured snapshot identity. Contract types match through the manifest's
+   supported aliases: author Listing YAML as `listing_contract`, while its
+   runtime snapshot retains `listing`. Other identity checks remain unchanged;
+   missing or genuinely different contract types are invalid.
 5. Lint, save with the latest optimistic hash, run through `qa_test_run`, and
    poll `qa_job_get` through PREPARE and `checkpoint_restored`.
 6. Inspect `resume_context` and the transcript/assertions in the saved run. A
    Checkpoint E2E must not emit a cold-opening turn before continuing the saved
    conversation.
+
+Do not rewrite a snapshot's runtime type or remove field assertions to resolve
+an alias mismatch. The QA boundary handles aliases for field lookup and
+checkpoint compatibility without changing restored runtime state. No artifact
+migration or regeneration is needed solely for this alias fix; a separately
+stale bundle still follows the normal regeneration workflow.
 
 When the user explicitly requests a manual artifact instead of generation,
 call `qa_snapshot_artifact_save` with a complete runtime snapshot JSON object.

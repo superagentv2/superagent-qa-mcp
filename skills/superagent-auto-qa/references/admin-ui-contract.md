@@ -326,7 +326,11 @@ validity, not compatibility with every E2E or microtest.
 Catalog rows expose `start_mode` and `snapshot_path` for checkpoint consumers.
 An E2E consumer requires a version 3 artifact with `backend_state`, matching
 `user_id`, `contract_type`, `mode`, and `mode_style`, and cannot also use
-`seed_scenario`. During a Checkpoint E2E, Run Studio keeps the job in PREPARE
+`seed_scenario`. Contract types use the manifest's supported aliases for
+compatibility and field lookup: Listing YAML uses `listing_contract` while
+captured runtime state retains `listing`. Other identity checks remain
+unchanged; missing or genuinely different types are rejected. During a
+Checkpoint E2E, Run Studio keeps the job in PREPARE
 while the runner creates a fresh room, hydrates cloned backend state,
 initializes extraction in Edit mode, remaps identifiers, and restores the saved
 task/chat context. `checkpoint_restored` marks normal execution; saved reports

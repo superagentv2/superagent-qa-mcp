@@ -183,9 +183,22 @@ snapshot: ../snapshots/purchase-review-ready.json
 The path is relative to the E2E YAML. Checkpoint E2E requires a
 version 3 artifact with `backend_state`; versions 1 and 2 remain valid only for
 offline microtests. The E2E and checkpoint must match on `user_id`,
-`contract_type`, `mode`, and `mode_style`. `snapshot` and `seed_scenario` are
+`contract_type`, `mode`, and `mode_style`. Contract-type comparison and field
+lookup use the manifest's supported aliases: author Listing YAML with
+`contract_type: listing_contract`; generated runtime snapshots retain
+`userdata_fields.contract_type: listing`. Those values are compatible without
+rewriting the artifact or changing restored Listing behavior. Missing or
+genuinely different types remain invalid, and the other identity checks are
+unchanged. `snapshot` and `seed_scenario` are
 mutually exclusive because both define initial state. Use a micro-test instead
 when fast offline behavior is the intended subject.
+
+Read canonical values from `runner_schema.scenario_yaml.contract_types` and
+accepted alias mappings from `runner_schema.scenario_yaml.contract_type_aliases`
+in `qa_manifest_get`. An alias changes QA comparison and schema selection only;
+it does not rewrite the artifact's `userdata_fields` during capture or restore.
+`runner_schema.scenario_yaml.checkpoint_e2e.identity` describes the identity
+fields, alias comparison, missing-type rejection, and runtime-value preservation.
 
 Do not assume that adding `fake_backend` to E2E YAML activates offline
 execution. In the current hosted MCP/UI execution path, E2E tests use the real

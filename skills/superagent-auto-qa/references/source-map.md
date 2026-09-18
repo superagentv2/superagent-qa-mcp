@@ -40,6 +40,8 @@ Use this as the first code-navigation map for SuperAgent QA automation.
 - Runner API for admin UI: `runner_api.py`
 - Main CLI: `evaluate.py`
 - E2E and micro-test schema: `core/testing/e2e_scenario.py`
+- QA canonical contract types and checkpoint identity compatibility:
+  `core/testing/contract_types.py`. Runtime snapshot values remain unchanged.
 - Extraction schema: `core/testing/extraction_scenario.py`
 - Conversation runner, including Checkpoint E2E validation, hydration, ID
   remapping, and runtime restoration: `core/testing/conversation_runner.py`
