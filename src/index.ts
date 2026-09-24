@@ -292,14 +292,14 @@ server.tool(
 
 server.tool(
   "qa_definition_get",
-  "Read a YAML test definition by catalog test id.",
+  "Read a YAML test definition using its catalog id (immutable uuid). Legacy identifiers remain supported when unambiguous; jira is the editable display ID.",
   { testId: z.string() },
   async ({ testId }) => jsonText(await qa.get(`/eval/tests/${encode(testId)}/definition`))
 );
 
 server.tool(
   "qa_definition_save",
-  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Checkpoint E2E compatibility uses supported contract-type aliases without changing captured runtime values; other identity checks remain unchanged.",
+  "Save a YAML test definition with optimistic locking and return validation/lint diagnostics. Preserve uuid; jira is the editable display ID. Use the returned canonical id for later calls. Checkpoint E2E compatibility uses supported contract-type aliases without changing captured runtime values; captured user/mode identity checks remain unchanged.",
   {
     testId: z.string(),
     yaml: z.string(),
@@ -358,7 +358,7 @@ server.tool(
 
 server.tool(
   "qa_draft_create",
-  "Create a draft YAML test file.",
+  "Create a new draft YAML test file with a server-generated uuid. jira is the editable display ID; id optionally selects the draft filename. When copying a test, omit its uuid so the new test receives a distinct identity.",
   {
     testType: z.string(),
     yaml: z.string(),
@@ -741,7 +741,7 @@ server.tool("qa_job_cancel", "Cancel one active QA runner job.", { jobId: z.stri
 
 server.tool(
   "qa_test_run",
-  "Run one API-runnable catalog test. Checkpoint E2E tests report hydration and restoration through ordinary preparing job events; poll qa_job_get for progress.",
+  "Run one API-runnable catalog test using its canonical catalog id (immutable uuid), not its editable jira display ID. Checkpoint E2E tests report hydration and restoration through ordinary preparing job events; poll qa_job_get for progress.",
   {
     testId: z.string(),
     ...runOptionsSchema,

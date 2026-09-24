@@ -201,6 +201,11 @@ Promotion should answer:
 
 ## Editing Existing Tests
 
+- Preserve the immutable YAML `uuid`, including a human-readable legacy UUID.
+  `jira` is the editable displayed ID. Use the current catalog `id` for saves,
+  runs, and lifecycle calls; do not substitute a newly edited display ID.
+- When copying a definition to create a separate test, omit its `uuid`; the
+  server assigns a new one. Keep the original UUID for ordinary edits or moves.
 - Draft/reviewed YAML can be updated in place if lint passes.
 - Promoted YAML should not be overwritten from admin. The API creates a draft
   revision instead.

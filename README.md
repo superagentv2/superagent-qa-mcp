@@ -104,6 +104,13 @@ The server exposes the QA automation API as MCP tools:
   run, and triage.
 - Legacy scenario compatibility endpoints.
 
+Test definitions separate immutable `uuid` from the editable `jira` display
+ID. Use the catalog's returned `id` for MCP `testId` arguments. Preserve UUIDs
+on edits, including legacy human-readable values; omit them on new or copied
+drafts so the runner generates a fresh UUID. Existing files and legacy path
+identifiers remain supported during rollout. The hosted backfill is a separate
+final migration step, not an effect of installing this MCP server.
+
 Snapshot recipes are the source of truth for newly created fixtures. New
 generation produces a version 3 checkpoint containing reconstructable agent
 state and a restricted backend hydration seed. Versions 1 and 2 remain usable by
