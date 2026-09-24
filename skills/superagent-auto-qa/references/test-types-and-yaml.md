@@ -45,8 +45,8 @@ Prefer these metadata fields on new or migrated definitions:
 test_type: e2e      # e2e | extraction | microtest
 qa_status: draft        # draft | reviewed | promoted | archived
 source_trace: manual-draft
-jira: QA-SHORT-ID       # E2E and microtest
-id: QA-SHORT-ID         # extraction
+uuid: QA-LEGACY-ID      # immutable; new tests receive a generated UUID
+jira: QA-SHORT-ID       # editable displayed ID for all three test types
 authored_by: qa-admin
 notes: Human-readable intent and review notes.
 area: [cross-flow]
@@ -55,6 +55,21 @@ priority: 1
 covers: [PUR-NEW-002]
 ai_provider: codex
 ```
+
+`uuid` identifies the test in the catalog, execution, playlists, and history.
+It is an opaque immutable string: existing identifiers remain valid legacy
+UUIDs. New test creation assigns a UUID automatically; omit `uuid` from a new
+draft or copied definition. Preserve it exactly when editing an existing test.
+Changing `jira` changes the current display ID without changing identity.
+
+Older files without `uuid` remain readable until the server backfill. Their
+original `jira` (E2E/microtest) or `id` (extraction) supplies the legacy identity;
+an explicit save freezes that identity before applying a display-ID change.
+Extraction's old `id` remains supported for compatibility, while `jira` is the
+preferred display value. Use the returned catalog `id` for API/MCP operations.
+Duplicate identities must be resolved explicitly; never change or copy a UUID
+merely to make an unrelated edit save. Snapshot recipes retain their separate
+`bundle_id` and are outside this test-identity migration.
 
 `qa_status` powers lifecycle. `area`, `kind`, `priority`, and `covers` power
 catalog filtering/search and side-panel context. Numeric test priorities are

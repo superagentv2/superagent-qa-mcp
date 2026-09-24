@@ -76,6 +76,14 @@ For any non-trivial QA task:
 
 ## Test Types
 
+Test YAML uses `uuid` as its immutable identity and `jira` as its editable
+display ID. Legacy UUID values may be human-readable identifiers; preserve
+them exactly. Use the catalog's returned `id` for tool calls rather than
+looking up a test by its mutable display ID. Preserve `uuid` on edits; omit
+it when creating a new test or duplicating a definition so the server can
+assign a fresh UUID. See `references/test-types-and-yaml.md` for compatibility
+with older files and extraction fixtures.
+
 Prefer explicit YAML `test_type` for new and edited tests:
 
 ```yaml
