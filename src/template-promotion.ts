@@ -3,6 +3,7 @@ import { Pool, type PoolClient } from "pg";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { result } from "./evidence.js";
+import { databasePoolConfig } from "./database-connection.js";
 
 type Environment = "DEV" | "STAGING";
 type TemplateKey = {
@@ -150,12 +151,12 @@ async function transaction<T>(environment: Environment, write: boolean,
   if (!url) reject(`${environment} ${write ? "promotion writer" : "evidence reader"} is not configured`);
   let pool: Pool;
   if (write) {
-    pool = writers.get(environment) ?? new Pool({ connectionString: url, max: 2,
+    pool = writers.get(environment) ?? new Pool(databasePoolConfig(url, { max: 2,
       connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000,
-      application_name: `superagent_qa_promotion_${environment.toLowerCase()}` });
+      application_name: `superagent_qa_promotion_${environment.toLowerCase()}` }));
     writers.set(environment, pool);
   } else {
-    pool = new Pool({ connectionString: url, max: 1, connectionTimeoutMillis: 5000 });
+    pool = new Pool(databasePoolConfig(url, { max: 1, connectionTimeoutMillis: 5000 }));
   }
   let db: PoolClient | undefined;
   try {

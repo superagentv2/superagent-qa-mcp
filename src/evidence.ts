@@ -1,6 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { databasePoolConfig } from "./database-connection.js";
 
 type Environment = "DEV" | "STAGING";
 const environment = z.enum(["DEV", "STAGING"]);
@@ -27,8 +28,8 @@ function pool(env: Environment): Pool {
   if (!url) throw new Error(`${env} evidence database is not configured`);
   let value = pools.get(env);
   if (!value) {
-    value = new Pool({ connectionString: url, max: 4, connectionTimeoutMillis: 5000,
-      idleTimeoutMillis: 30000, application_name: `superagent_qa_mcp_${env.toLowerCase()}` });
+    value = new Pool(databasePoolConfig(url, { max: 4, connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000, application_name: `superagent_qa_mcp_${env.toLowerCase()}` }));
     pools.set(env, value);
   }
   return value;

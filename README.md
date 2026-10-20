@@ -31,6 +31,7 @@ PROMOTION_DEV_DATABASE_URL=
 PROMOTION_STAGING_DATABASE_URL=
 PROMOTION_DEV_BACKEND_TOKEN=
 PROMOTION_STAGING_BACKEND_TOKEN=
+QA_DATABASE_CA_CERT_B64=
 ```
 
 `QA_RUNNER_URL` points to the Python QA runner API. `QA_RUNNER_TOKEN` must match
@@ -52,7 +53,11 @@ schema. Each database URL should use a dedicated SELECT-only PostgreSQL role
 with access solely to its matching schema. Queries are fixed and parameterized,
 run in `BEGIN READ ONLY`, and have an eight-second statement timeout. The
 configured credentials use the direct PostgreSQL endpoint because the existing
-`app` connection pool rejects newly created database roles. The
+`app` connection pool rejects newly created database roles. Set
+`QA_DATABASE_CA_CERT_B64` to the base64-encoded managed-cluster CA certificate
+in the QA MCP GitHub environment. Node verifies the database TLS chain against
+that CA; the database certificate uses the cluster's internal name, so hostname
+verification is not available on its public endpoint. The
 backend URLs should end in `/api/` (for example, the internal DEV and STAGING
 backend addresses). Each backend token must match that environment's
 `QA_EVIDENCE_TOKEN`; it is a service credential, distinct from the shared
@@ -470,6 +475,6 @@ Direct MCP install without the plugin:
 ```bash
 export MCP_TOKEN="admin-facing-mcp-secret"
 codex mcp add superagent_qa \
-  --url https://qa-mcp.superagent.estate/mcp \
+  --url http://88.198.201.6:3009/mcp \
   --bearer-token-env-var MCP_TOKEN
 ```
