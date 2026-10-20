@@ -151,8 +151,8 @@ async function transaction<T>(environment: Environment, write: boolean,
   if (!url) reject(`${environment} ${write ? "promotion writer" : "evidence reader"} is not configured`);
   let pool: Pool;
   if (write) {
-    pool = writers.get(environment) ?? new Pool(databasePoolConfig(url, { max: 2,
-      connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000,
+    pool = writers.get(environment) ?? new Pool(databasePoolConfig(url, { max: 1,
+      connectionTimeoutMillis: 5000, idleTimeoutMillis: 5000,
       application_name: `superagent_qa_promotion_${environment.toLowerCase()}` }));
     writers.set(environment, pool);
   } else {

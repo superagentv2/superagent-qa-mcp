@@ -28,8 +28,8 @@ function pool(env: Environment): Pool {
   if (!url) throw new Error(`${env} evidence database is not configured`);
   let value = pools.get(env);
   if (!value) {
-    value = new Pool(databasePoolConfig(url, { max: 4, connectionTimeoutMillis: 5000,
-      idleTimeoutMillis: 30000, application_name: `superagent_qa_mcp_${env.toLowerCase()}` }));
+    value = new Pool(databasePoolConfig(url, { max: 1, connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 5000, application_name: `superagent_qa_mcp_${env.toLowerCase()}` }));
     pools.set(env, value);
   }
   return value;
