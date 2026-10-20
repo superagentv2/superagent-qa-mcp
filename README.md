@@ -21,6 +21,16 @@ MCP_HOST=127.0.0.1
 MCP_PORT=3009
 MCP_ALLOWED_HOSTS=
 MCP_TOKEN=
+EVIDENCE_DEV_DATABASE_URL=
+EVIDENCE_STAGING_DATABASE_URL=
+EVIDENCE_DEV_BACKEND_URL=
+EVIDENCE_STAGING_BACKEND_URL=
+EVIDENCE_DEV_BACKEND_TOKEN=
+EVIDENCE_STAGING_BACKEND_TOKEN=
+PROMOTION_DEV_DATABASE_URL=
+PROMOTION_STAGING_DATABASE_URL=
+PROMOTION_DEV_BACKEND_TOKEN=
+PROMOTION_STAGING_BACKEND_TOKEN=
 ```
 
 `QA_RUNNER_URL` points to the Python QA runner API. `QA_RUNNER_TOKEN` must match
@@ -35,6 +45,47 @@ required and every `/mcp` request must send it as `Authorization: Bearer ...`.
 The admin user gets `MCP_TOKEN`; the admin user does not get `QA_RUNNER_TOKEN`.
 `QA_MCP_TOKEN` is accepted only as a backward-compatible fallback for older
 local configs; use `MCP_TOKEN` going forward.
+
+The `EVIDENCE_*` settings enable read-only room and template tools. DEV and
+STAGING are selected explicitly on every call; STAGING is the production data
+schema. Each database URL should use a dedicated SELECT-only PostgreSQL role
+with access solely to its matching schema. Queries are fixed and parameterized,
+run in `BEGIN READ ONLY`, and have an eight-second statement timeout. The
+configured credentials use the direct PostgreSQL endpoint because the existing
+`app` connection pool rejects newly created database roles. The
+backend URLs should end in `/api/` (for example, the internal DEV and STAGING
+backend addresses). Each backend token must match that environment's
+`QA_EVIDENCE_TOKEN`; it is a service credential, distinct from the shared
+Codex-facing `MCP_TOKEN`. Empty settings leave the corresponding source
+unavailable and `qa_data_capabilities_get` reports this without exposing values.
+
+The backend service token grants GET access only to trace current-state,
+trace metadata, and bounded call-log excerpts. Configure it as the
+`QA_EVIDENCE_TOKEN` GitHub environment secret for both backend deployments,
+and configure the matching `EVIDENCE_*_BACKEND_TOKEN` in the QA MCP DEV
+environment. Configure both database URLs and backend URLs there as well.
+No database password or service token belongs in this repository.
+
+Template promotion uses separate `PROMOTION_*_DATABASE_URL` credentials with
+SELECT, INSERT, and UPDATE rights on the matching target schema's template,
+version, mapping, and jurisdiction tables. Do not grant these credentials to
+Codex or reuse the evidence readers. The matching backend
+`QA_TEMPLATE_PROMOTION_TOKEN` is needed only for the post-commit template-cache
+refresh endpoint. Configure distinct values in the backend DEV and STAGING
+GitHub environments, and place each corresponding value in QA MCP's
+`PROMOTION_*_BACKEND_TOKEN` secret. The existing `MCP_TOKEN` remains the
+Codex-facing token for both environments.
+
+`qa_template_promotion_preview` reads both environments and creates a
+15-minute in-memory plan. `qa_template_promotion_apply` rechecks source and
+target hashes, copies the current published/draft layout, base PDF, three
+template prompts, field mappings, title, and linked child templates in a
+target transaction, and preserves all historical version IDs. It refreshes
+the target template caches after commit. If refresh fails, the receipt says
+`committed: true, cache_refresh: "failed"`; retry the same plan or call
+`qa_template_promotion_cache_refresh`. Prompt-library revisions, customer
+documents, call sessions, and user data are outside the bundle. The plan is
+process-local and lost on restart; preview again if it expires before apply.
 
 Hosted deployment shape:
 
@@ -103,6 +154,11 @@ The server exposes the QA automation API as MCP tools:
 - Runs, run markdown, jobs, cancel, single run, bulk run, suite run, profile
   run, and triage.
 - Legacy scenario compatibility endpoints.
+- Read-only DEV/STAGING room, trace, event, log, document field, and template
+  inspection. See `skills/superagent-auto-qa/references/evidence-tools.md`.
+- Explicit preview/apply template configuration promotion between DEV and
+  STAGING, with a separate cache-refresh recovery tool. See
+  `skills/superagent-auto-qa/references/template-promotion.md`.
 
 Test definitions separate immutable `uuid` from the editable `jira` display
 ID. Use the catalog's returned `id` for MCP `testId` arguments. Preserve UUIDs
@@ -160,8 +216,9 @@ It also exposes read-only MCP resources:
 
 ## Scope
 
-This MCP does not read the SuperAgent codebase. It operates through
-`QA_RUNNER_URL`, matching the Admin QA API behavior and safety gates.
+This MCP does not read the SuperAgent codebase. QA automation uses
+`QA_RUNNER_URL`; the evidence tools use fixed read-only database queries and
+narrow authenticated backend GET endpoints.
 
 ## Codex Plugin
 

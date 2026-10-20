@@ -15,18 +15,32 @@ Default to read-only evidence gathering. Do not mutate database rows, create
 fixtures, delete debug records, or call mutating admin endpoints unless the user
 explicitly asks for that exact write.
 
+For an explicitly authorized template configuration migration, use the QA MCP
+preview/apply tools described in
+`../superagent-auto-qa/references/template-promotion.md`. Do not attempt a
+promotion through the general read-only SQL helper. The NewVoice prompt library
+is outside this promotion.
+
 ## First Moves
 
 1. Confirm the user provided a room id, debug URL, document id, template slug,
    contract instance id, or a concrete question.
-2. If credentials are needed, read `references/env-contract.md` and verify only
+2. If QA MCP is available, call `qa_data_capabilities_get` and use its
+   `qa_rooms_list`, `qa_room_get`, `qa_room_debug_get`, `qa_room_trace_get`,
+   `qa_room_events_list`, `qa_room_logs_get`, `qa_room_fields_get`,
+   `qa_templates_list`, and `qa_template_version_get` tools first. Read
+   `../superagent-auto-qa/references/evidence-tools.md` for parameters,
+   pagination, provenance, and prefill limits. Select `DEV` or `STAGING`
+   explicitly; STAGING is production data.
+3. If MCP evidence is unavailable or a question requires a narrow SQL join
+   outside those tools, read `references/env-contract.md` and verify only
    that the required variables are present. Never print values.
-3. For voice-call evidence, read `references/admin-debug-api.md` and prefer
+4. For voice-call evidence outside MCP, read `references/admin-debug-api.md` and prefer
    `scripts/call_debug_export.py`.
-4. For database evidence, read `references/schema-map.md` and
+5. For database evidence outside MCP, read `references/schema-map.md` and
    `references/query-recipes.md`, then use `scripts/db_query.py` for read-only
    SQL.
-5. Report exact ids, counts, statuses, and JSON paths used. Redact passwords,
+6. Report exact ids, counts, statuses, and JSON paths used. Redact passwords,
    tokens, signed URLs, private emails, and unnecessary transcript text.
 
 ## Evidence Strategy

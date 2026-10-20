@@ -12,6 +12,8 @@ import { z } from "zod";
 import { loadConfig } from "./config.js";
 import { errorMessage, logEvent, redactUrl, responseByteLength, withLogContext } from "./logger.js";
 import { QaRunnerClient } from "./qa-client.js";
+import { registerEvidenceTools } from "./evidence.js";
+import { registerTemplatePromotionTools } from "./template-promotion.js";
 
 const config = loadConfig();
 const qa = new QaRunnerClient(config);
@@ -61,6 +63,9 @@ const originalTool = server.tool.bind(server) as (...args: any[]) => unknown;
 
   return originalTool(...args);
 };
+
+registerEvidenceTools(server);
+registerTemplatePromotionTools(server);
 
 const boolDefault = (value: boolean) => z.boolean().default(value);
 const intDefault = (value: number, min = 1, max = 500) =>

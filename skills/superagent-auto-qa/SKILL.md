@@ -17,6 +17,17 @@ codebase. Use the MCP tools as the primary control surface. Do not invent field
 names, tool names, assertion kinds, contract fields, lifecycle states, paths, or
 runner commands when the MCP manifest and catalog can tell you.
 
+For room/debug links, trace, call logs, persisted document values, or template
+configuration, first read `references/evidence-tools.md` and call
+`qa_data_capabilities_get`. Select `DEV` or `STAGING` explicitly on every
+data call; STAGING is production data. These data tools are read-only, while
+other QA tools can change QA assets or start runs.
+
+For a user-authorized DEV/STAGING template configuration replacement, read
+`references/template-promotion.md`. Always preview before apply and inspect
+the exact source/target identity, linked child forms, hashes, and target draft
+loss. NewVoice prompt-library revisions are outside this tool's scope.
+
 ## First Moves
 
 For any non-trivial QA task:
