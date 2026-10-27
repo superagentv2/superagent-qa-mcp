@@ -1,0 +1,29 @@
+{
+  "project": "superagent-dev-qa-mcp",
+  "environment": "rehearsal",
+  "contract_version": "rehearsal-v1",
+  "region": "eu-central-1",
+  "registry": "649089875282.dkr.ecr.eu-central-1.amazonaws.com",
+  "allowed_sources": {
+    "superagentv2/superagent-qa-mcp": [
+      "refs/heads/migration/aws-dev"
+    ]
+  },
+  "checks": [
+    "python3",
+    ".delivery/rehearsal-check.py",
+    "source"
+  ],
+  "images": {
+    "qa-mcp": {
+      "repository": "migration/superagent-dev-qa-mcp",
+      "context": ".",
+      "dockerfile": "Dockerfile"
+    }
+  },
+  "post_build_checks": [
+    "python3",
+    ".delivery/rehearsal-check.py",
+    "image"
+  ]
+}

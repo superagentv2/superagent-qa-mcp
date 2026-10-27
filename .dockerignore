@@ -7,3 +7,7 @@ node_modules
 npm-debug.log
 *.log
 .DS_Store
+
+# Isolated rehearsal packaging: no historical exports or existing provider key.
+/artifacts/
+/src/main/resources/config/docusign-private.key

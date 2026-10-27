@@ -1,0 +1,53 @@
+name: Isolated AWS DEV CI rehearsal
+on:
+  push:
+    branches: [migration/aws-dev]
+permissions:
+  contents: read
+concurrency:
+  group: sa-dev-rehearsal-qa-mcp
+  cancel-in-progress: false
+jobs:
+  rehearsal:
+    if: github.repository == 'superagentv2/superagent-qa-mcp' && github.ref == 'refs/heads/migration/aws-dev'
+    environment: aws-dev
+    runs-on: [self-hosted, linux, x64, sa-dev-rehearsal-qa-mcp]
+    timeout-minutes: 125
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      BUILD_LOCK_FILE: /srv/ci/locks/image-build.lock
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          ref: ${{ github.sha }}
+      - name: Verify explicit source SHA and sanitized checkout; build real application image
+        run: python3 .delivery/pipeline.py build .delivery/project.json
+      - name: Temporary repository-scoped ECR publish role
+        uses: aws-actions/configure-aws-credentials@ce2ec50a23cfb8aacf5544bea7a651d803d626f6
+        with:
+          role-to-assume: ${{ vars.ECR_PUBLISH_ROLE_ARN }}
+          unset-current-credentials: true
+          aws-region: eu-central-1
+          allowed-account-ids: '649089875282'
+      - name: Publish immutable SHA-run-attempt image and completed scan
+        id: publish
+        run: python3 .delivery/pipeline.py publish .delivery/project.json
+      - name: Replace publish credentials with repository-scoped ECR pull role
+        uses: aws-actions/configure-aws-credentials@ce2ec50a23cfb8aacf5544bea7a651d803d626f6
+        with:
+          role-to-assume: ${{ vars.ECR_PULL_ROLE_ARN }}
+          unset-current-credentials: true
+          aws-region: eu-central-1
+          allowed-account-ids: '649089875282'
+      - name: Deliver to fixed isolated helper; verify receipt
+        env:
+          DEPLOY_RELEASE_ID: ${{ steps.publish.outputs.release_id }}
+          DEPLOY_HOST: 127.0.0.1
+          DEPLOY_USER: deploy-sa-rehearsal-qa-mcp
+          DEPLOY_KNOWN_HOSTS: ${{ vars.REHEARSAL_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.REHEARSAL_DEPLOY_SSH_KEY }}
+        run: python3 .delivery/deploy-rehearsal.py
