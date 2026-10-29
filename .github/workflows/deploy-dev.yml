@@ -14,7 +14,7 @@ name: Deploy DEV (QA MCP)
         description: Optional commit hash (leave empty to deploy selected branch HEAD)
         required: false
 concurrency:
-  group: qa-mcp-dev
+  group: qa-mcp-dev${{ github.ref == 'refs/heads/migration/aws-dev' && '-aws-preview' || '' }}
   cancel-in-progress: true
 jobs:
   build:
