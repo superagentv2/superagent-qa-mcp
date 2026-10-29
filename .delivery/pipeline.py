@@ -83,6 +83,9 @@ def build(config):
     lock_path = os.environ.get("BUILD_LOCK_FILE", "/srv/ci/locks/image-build.lock")
     with open(lock_path, "a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        # Six persistent idle runners and current apps must leave host headroom.
+        available = next(int(line.split()[1]) for line in Path("/proc/meminfo").read_text().splitlines() if line.startswith("MemAvailable:"))
+        require(available >= 3 * 1024 * 1024, "Less than 3GiB host RAM available; build held")
         run(config["checks"])
         # Optional explicit public frontend build inputs, never runtime secrets.
         public_args = []
@@ -167,7 +170,7 @@ def deploy(config):
         known.chmod(0o600)
         envelope = {"manifest": release, "registry_password": password}
         if config.get("runtime_from_actions"):
-            from runtime_config import from_environment
+            from runtime_environment import from_environment
             envelope["runtime"] = from_environment(os.environ)
         payload = json.dumps(envelope).encode()
         result = subprocess.run(["ssh", "-F", "/dev/null", "-T", "-i", str(key), "-o", "BatchMode=yes",
@@ -178,7 +181,7 @@ def deploy(config):
         if result.returncode:
             print(json.dumps({"deployment_status": receipt.get("status"), "release_id": release["release_id"]}), flush=True)
             raise RuntimeError("Deployment failed; check the host receipt before retrying")
-        require(receipt.get("status") == "applied" and receipt.get("project") == config["project"] and
+        require(receipt.get("status") in config.get("deployment_receipts", ["applied"]) and receipt.get("project") == config["project"] and
                 receipt.get("environment") == config["environment"] and
                 receipt.get("release_id") == release["release_id"], "verified deployment receipt required")
     print(json.dumps({"release": release, "deployment": receipt}, sort_keys=True))

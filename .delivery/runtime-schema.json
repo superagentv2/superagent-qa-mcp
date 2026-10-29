@@ -1,0 +1,43 @@
+{
+  "components": {
+    "qa-mcp": {
+      "secret_names": [
+        "EVIDENCE_DEV_BACKEND_TOKEN",
+        "EVIDENCE_DEV_DATABASE_URL",
+        "MCP_TOKEN",
+        "PROMOTION_DEV_BACKEND_TOKEN",
+        "PROMOTION_DEV_DATABASE_URL",
+        "QA_RUNNER_TOKEN"
+      ],
+      "public_names": [
+        "EVIDENCE_DEV_BACKEND_URL",
+        "HOME",
+        "MCP_ALLOWED_HOSTS",
+        "MCP_HOST",
+        "MCP_PORT",
+        "MCP_TRANSPORT",
+        "PYTHONDONTWRITEBYTECODE",
+        "QA_DATABASE_CA_CERT_B64",
+        "QA_DATABASE_TLS_VERIFY_FULL",
+        "QA_RUNNER_URL"
+      ],
+      "required_secret_names": [
+        "EVIDENCE_DEV_BACKEND_TOKEN",
+        "MCP_TOKEN",
+        "QA_RUNNER_TOKEN"
+      ],
+      "defaults": {
+        "MCP_TRANSPORT": "http",
+        "MCP_HOST": "0.0.0.0",
+        "MCP_PORT": "3009",
+        "QA_RUNNER_URL": "http://qa-runner:8090",
+        "EVIDENCE_DEV_BACKEND_URL": "http://backend:8080/api",
+        "MCP_ALLOWED_HOSTS": "localhost,127.0.0.1,qa-mcp",
+        "QA_DATABASE_CA_CERT_B64": "",
+        "HOME": "/tmp",
+        "QA_DATABASE_TLS_VERIFY_FULL": "true",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      }
+    }
+  }
+}

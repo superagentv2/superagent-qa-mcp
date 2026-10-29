@@ -32,6 +32,7 @@ PROMOTION_STAGING_DATABASE_URL=
 PROMOTION_DEV_BACKEND_TOKEN=
 PROMOTION_STAGING_BACKEND_TOKEN=
 QA_DATABASE_CA_CERT_B64=
+QA_DATABASE_TLS_VERIFY_FULL=false
 ```
 
 `QA_RUNNER_URL` points to the Python QA runner API. `QA_RUNNER_TOKEN` must match
@@ -57,7 +58,14 @@ configured credentials use the direct PostgreSQL endpoint because the existing
 `QA_DATABASE_CA_CERT_B64` to the base64-encoded managed-cluster CA certificate
 in the QA MCP GitHub environment. Node verifies the database TLS chain against
 that CA; the database certificate uses the cluster's internal name, so hostname
-verification is not available on its public endpoint. The
+verification is not available on its public endpoint. This remains the default.
+For AWS DEV, set `QA_DATABASE_TLS_VERIFY_FULL=true`, use the private RDS DNS
+hostname with `sslmode=verify-full` in both DEV database URLs, and supply the
+public RDS CA bundle in `QA_DATABASE_CA_CERT_B64`. This opt-in verifies both the
+certificate chain and hostname; a mismatched hostname fails the connection.
+Do not put SSL certificate/key or other TLS override parameters in database
+URLs: the helper owns the TLS configuration and rejects these overrides.
+Keep STAGING credentials absent from the dedicated AWS DEV service. The
 backend URLs should end in `/api/` (for example, the internal DEV and STAGING
 backend addresses). Each backend token must match that environment's
 `QA_EVIDENCE_TOKEN`; it is a service credential, distinct from the shared

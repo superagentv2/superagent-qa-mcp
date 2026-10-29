@@ -1,7 +1,7 @@
 {
   "project": "superagent-dev-qa-mcp",
-  "environment": "rehearsal",
-  "contract_version": "rehearsal-v1",
+  "environment": "aws-dev",
+  "contract_version": "aws-dev-v1",
   "region": "eu-central-1",
   "registry": "649089875282.dkr.ecr.eu-central-1.amazonaws.com",
   "allowed_sources": {
@@ -25,5 +25,10 @@
     "python3",
     ".delivery/rehearsal-check.py",
     "image"
+  ],
+  "runtime_from_actions": true,
+  "deployment_receipts": [
+    "applied",
+    "staged"
   ]
 }
