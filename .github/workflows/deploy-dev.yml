@@ -1,5 +1,5 @@
 # Existing DEV build/test flow; AWS registry and deployment destination.
-# Migration branch uses aws-dev. Existing main/dev stays untouched until cutover.
+# DEV builds and deployments use the existing AWS DEV environment.
 name: Deploy DEV (QA MCP)
 'on':
   push:
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/migration/aws-dev' && 'aws-dev' || 'dev' }}
+    environment: aws-dev
     permissions:
       contents: read
       id-token: write
@@ -96,7 +96,7 @@ jobs:
   deploy:
     name: Deploy DEV to AWS
     needs: build
-    environment: ${{ github.ref == 'refs/heads/migration/aws-dev' && 'aws-dev' || 'dev' }}
+    environment: aws-dev
     runs-on:
     - self-hosted
     - linux

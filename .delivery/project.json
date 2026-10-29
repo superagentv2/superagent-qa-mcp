@@ -6,7 +6,8 @@
   "registry": "649089875282.dkr.ecr.eu-central-1.amazonaws.com",
   "allowed_sources": {
     "superagentv2/superagent-qa-mcp": [
-      "refs/heads/migration/aws-dev"
+      "refs/heads/migration/aws-dev",
+      "refs/heads/main"
     ]
   },
   "checks": [
