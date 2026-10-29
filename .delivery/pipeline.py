@@ -85,7 +85,7 @@ def build(config):
         fcntl.flock(lock, fcntl.LOCK_EX)
         # Six persistent idle runners and current apps must leave host headroom.
         available = next(int(line.split()[1]) for line in Path("/proc/meminfo").read_text().splitlines() if line.startswith("MemAvailable:"))
-        require(available >= 3 * 1024 * 1024, "Less than 3GiB host RAM available; build held")
+        require(available >= 4 * 1024 * 1024, "Less than 4GiB host RAM available; build held")
         run(config["checks"])
         # Optional explicit public frontend build inputs, never runtime secrets.
         public_args = []
