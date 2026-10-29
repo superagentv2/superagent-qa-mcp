@@ -1,7 +1,6 @@
 name: AWS DEV release
-on:
-  push:
-    branches: [migration/aws-dev]
+'on':
+  workflow_dispatch: {}
 permissions:
   contents: read
 concurrency:
@@ -11,7 +10,11 @@ jobs:
   release:
     if: github.repository == 'superagentv2/superagent-qa-mcp' && github.ref == 'refs/heads/migration/aws-dev'
     environment: aws-dev
-    runs-on: [self-hosted, linux, x64, sa-dev-qa-mcp-ci]
+    runs-on:
+    - self-hosted
+    - linux
+    - x64
+    - sa-dev-qa-mcp-ci
     timeout-minutes: 125
     permissions:
       contents: read
@@ -19,54 +22,61 @@ jobs:
     env:
       BUILD_LOCK_FILE: /srv/ci/locks/image-build.lock
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          persist-credentials: false
-          fetch-depth: 1
-          ref: ${{ github.sha }}
-      - name: Exact-source checks and rootless real application build
-        run: python3 .delivery/pipeline.py build .delivery/project.json
-      - name: Temporary repository-scoped ECR publish role
-        uses: aws-actions/configure-aws-credentials@ce2ec50a23cfb8aacf5544bea7a651d803d626f6
-        with:
-          role-to-assume: ${{ vars.ECR_PUBLISH_ROLE_ARN }}
-          unset-current-credentials: true
-          aws-region: eu-central-1
-          allowed-account-ids: '649089875282'
-      - name: Publish immutable image and completed OS scan
-        id: publish
-        run: python3 .delivery/pipeline.py publish .delivery/project.json
-      - name: Replace publish credentials with ECR pull-only role
-        if: vars.AWS_DEV_DEPLOY_ENABLED == 'true' && vars.AWS_DEV_CREDENTIALS_ENROLLED == 'true'
-        uses: aws-actions/configure-aws-credentials@ce2ec50a23cfb8aacf5544bea7a651d803d626f6
-        with:
-          role-to-assume: ${{ vars.ECR_PULL_ROLE_ARN }}
-          unset-current-credentials: true
-          aws-region: eu-central-1
-          allowed-account-ids: '649089875282'
-      - name: Fixed DEV deployment; workers obey server activation guard
-        if: vars.AWS_DEV_DEPLOY_ENABLED == 'true' && vars.AWS_DEV_CREDENTIALS_ENROLLED == 'true'
-        env:
-          DEPLOY_RELEASE_ID: ${{ steps.publish.outputs.release_id }}
-          DEPLOY_HOST: 127.0.0.1
-          DEPLOY_USER: deploy-sa-dev-qa-mcp
-          DEPLOY_KNOWN_HOSTS: ${{ vars.DEV_DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_SSH_KEY: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'DEPLOY_SSH_KEY') && secrets.DEPLOY_SSH_KEY || '' }}
-          RUNTIME_ALLOWED_SECRET_NAMES: ${{ vars.AWS_DEV_RUNTIME_SECRET_NAMES }}
-          EVIDENCE_DEV_BACKEND_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'EVIDENCE_DEV_BACKEND_TOKEN') && secrets.EVIDENCE_DEV_BACKEND_TOKEN || '' }}
-          EVIDENCE_DEV_BACKEND_URL: ${{ vars.EVIDENCE_DEV_BACKEND_URL }}
-          EVIDENCE_DEV_DATABASE_URL: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'EVIDENCE_DEV_DATABASE_URL') && secrets.EVIDENCE_DEV_DATABASE_URL || '' }}
-          HOME: ${{ vars.HOME }}
-          MCP_ALLOWED_HOSTS: ${{ vars.MCP_ALLOWED_HOSTS }}
-          MCP_HOST: ${{ vars.MCP_HOST }}
-          MCP_PORT: ${{ vars.MCP_PORT }}
-          MCP_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'MCP_TOKEN') && secrets.MCP_TOKEN || '' }}
-          MCP_TRANSPORT: ${{ vars.MCP_TRANSPORT }}
-          PROMOTION_DEV_BACKEND_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'PROMOTION_DEV_BACKEND_TOKEN') && secrets.PROMOTION_DEV_BACKEND_TOKEN || '' }}
-          PROMOTION_DEV_DATABASE_URL: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'PROMOTION_DEV_DATABASE_URL') && secrets.PROMOTION_DEV_DATABASE_URL || '' }}
-          PYTHONDONTWRITEBYTECODE: ${{ vars.PYTHONDONTWRITEBYTECODE }}
-          QA_DATABASE_CA_CERT_B64: ${{ vars.QA_DATABASE_CA_CERT_B64 }}
-          QA_DATABASE_TLS_VERIFY_FULL: ${{ vars.QA_DATABASE_TLS_VERIFY_FULL }}
-          QA_RUNNER_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'QA_RUNNER_TOKEN') && secrets.QA_RUNNER_TOKEN || '' }}
-          QA_RUNNER_URL: ${{ vars.QA_RUNNER_URL }}
-        run: python3 .delivery/pipeline.py deploy .delivery/project.json
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        persist-credentials: false
+        fetch-depth: 1
+        ref: ${{ github.sha }}
+    - name: Exact-source checks and rootless real application build
+      run: python3 .delivery/pipeline.py build .delivery/project.json
+    - name: Temporary repository-scoped ECR publish role
+      uses: aws-actions/configure-aws-credentials@ce2ec50a23cfb8aacf5544bea7a651d803d626f6
+      with:
+        role-to-assume: ${{ vars.ECR_PUBLISH_ROLE_ARN }}
+        unset-current-credentials: true
+        aws-region: eu-central-1
+        allowed-account-ids: '649089875282'
+    - name: Publish immutable image and completed OS scan
+      id: publish
+      run: python3 .delivery/pipeline.py publish .delivery/project.json
+    - name: Replace publish credentials with ECR pull-only role
+      if: vars.AWS_DEV_DEPLOY_ENABLED == 'true' && vars.AWS_DEV_CREDENTIALS_ENROLLED == 'true'
+      uses: aws-actions/configure-aws-credentials@ce2ec50a23cfb8aacf5544bea7a651d803d626f6
+      with:
+        role-to-assume: ${{ vars.ECR_PULL_ROLE_ARN }}
+        unset-current-credentials: true
+        aws-region: eu-central-1
+        allowed-account-ids: '649089875282'
+    - name: Fixed DEV deployment; workers obey server activation guard
+      if: vars.AWS_DEV_DEPLOY_ENABLED == 'true' && vars.AWS_DEV_CREDENTIALS_ENROLLED == 'true'
+      env:
+        DEPLOY_RELEASE_ID: ${{ steps.publish.outputs.release_id }}
+        DEPLOY_HOST: 127.0.0.1
+        DEPLOY_USER: deploy-sa-dev-qa-mcp
+        DEPLOY_KNOWN_HOSTS: ${{ vars.DEV_DEPLOY_KNOWN_HOSTS }}
+        DEPLOY_SSH_KEY: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'DEPLOY_SSH_KEY') && secrets.DEPLOY_SSH_KEY
+          || '' }}
+        RUNTIME_ALLOWED_SECRET_NAMES: ${{ vars.AWS_DEV_RUNTIME_SECRET_NAMES }}
+        EVIDENCE_DEV_BACKEND_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'EVIDENCE_DEV_BACKEND_TOKEN')
+          && secrets.EVIDENCE_DEV_BACKEND_TOKEN || '' }}
+        EVIDENCE_DEV_BACKEND_URL: ${{ vars.EVIDENCE_DEV_BACKEND_URL }}
+        EVIDENCE_DEV_DATABASE_URL: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'EVIDENCE_DEV_DATABASE_URL')
+          && secrets.EVIDENCE_DEV_DATABASE_URL || '' }}
+        HOME: ${{ vars.HOME }}
+        MCP_ALLOWED_HOSTS: ${{ vars.MCP_ALLOWED_HOSTS }}
+        MCP_HOST: ${{ vars.MCP_HOST }}
+        MCP_PORT: ${{ vars.MCP_PORT }}
+        MCP_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'MCP_TOKEN') && secrets.MCP_TOKEN
+          || '' }}
+        MCP_TRANSPORT: ${{ vars.MCP_TRANSPORT }}
+        PROMOTION_DEV_BACKEND_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'PROMOTION_DEV_BACKEND_TOKEN')
+          && secrets.PROMOTION_DEV_BACKEND_TOKEN || '' }}
+        PROMOTION_DEV_DATABASE_URL: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'PROMOTION_DEV_DATABASE_URL')
+          && secrets.PROMOTION_DEV_DATABASE_URL || '' }}
+        PYTHONDONTWRITEBYTECODE: ${{ vars.PYTHONDONTWRITEBYTECODE }}
+        QA_DATABASE_CA_CERT_B64: ${{ vars.QA_DATABASE_CA_CERT_B64 }}
+        QA_DATABASE_TLS_VERIFY_FULL: ${{ vars.QA_DATABASE_TLS_VERIFY_FULL }}
+        QA_RUNNER_TOKEN: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'QA_RUNNER_TOKEN') &&
+          secrets.QA_RUNNER_TOKEN || '' }}
+        QA_RUNNER_URL: ${{ vars.QA_RUNNER_URL }}
+      run: python3 .delivery/pipeline.py deploy .delivery/project.json
