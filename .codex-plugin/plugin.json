@@ -1,6 +1,6 @@
 {
   "name": "superagent-qa",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Codex plugin for SuperAgent automation QA, admin debug, and database inspection workflows.",
   "author": {
     "name": "SuperAgent",

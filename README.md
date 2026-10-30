@@ -465,24 +465,21 @@ Do not commit this file. Do not paste database URLs, API keys, bearer tokens, or
 passwords into Codex chat, Jira, docs, or reports. The bundled scripts parse the
 file as inert dotenv text; do not `source` it.
 
-For DEV testing, `.mcp.json` currently points at:
+The plugin’s `.mcp.json` points at the AWS DEV MCP endpoint:
 
 ```text
-http://88.198.201.6:3009/mcp
+https://back-aws-dev.superagent.estate:19814/mcp
 ```
 
-Before distributing the plugin broadly, change that URL to the deployed MCP
-domain, for example:
-
-```text
-https://qa-mcp.superagent.estate/mcp
-```
+This public endpoint uses HTTPS on port `19814`; the MCP container listens on
+port `3009` behind the server proxy. Use the hostname above so TLS certificate
+verification succeeds.
 
 Direct MCP install without the plugin:
 
 ```bash
 export MCP_TOKEN="admin-facing-mcp-secret"
 codex mcp add superagent_qa \
-  --url http://88.198.201.6:3009/mcp \
+  --url https://back-aws-dev.superagent.estate:19814/mcp \
   --bearer-token-env-var MCP_TOKEN
 ```
