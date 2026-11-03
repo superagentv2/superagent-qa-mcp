@@ -74,11 +74,12 @@ secret, include its name in `AWS_DEV_RUNTIME_SECRET_NAMES`, and align the
 host runtime policy with the workflow schema before deploying. The client
 plugin endpoint and `MCP_TOKEN` stay unchanged.
 
-This database source does not configure a STAGING backend/log token, a production
-promotion writer, or a different QA runner. Leave those settings absent unless
-separately authorized. Backend URLs, when configured, should end in `/api/`
-(for example, the internal DEV and STAGING
-backend addresses). Each backend token must match that environment's
+The evidence database source alone does not configure a STAGING backend/log
+token, a production promotion writer, or a different QA runner. Production
+template promotion can be enabled separately as described below; it does not
+enable production backend/log evidence. Backend URLs, when configured, should
+end in `/api/` (for example, the internal DEV and STAGING backend addresses).
+Each backend evidence token must match that environment's
 `QA_EVIDENCE_TOKEN`; it is a service credential, distinct from the shared
 Codex-facing `MCP_TOKEN`. Empty settings leave the corresponding source
 unavailable and `qa_data_capabilities_get` reports this without exposing values.
@@ -101,6 +102,26 @@ refresh endpoint. Configure distinct values in the backend DEV and STAGING
 GitHub environments, and place each corresponding value in QA MCP's
 `PROMOTION_*_BACKEND_TOKEN` secret. The existing `MCP_TOKEN` remains the
 Codex-facing token for both environments.
+
+To enable reviewed production template migration through the existing hosted MCP,
+configure these `aws-dev` Actions inputs in the QA MCP repository:
+
+- Secret `PROMOTION_STAGING_DATABASE_URL`: production RDS writer connection to
+  `superagent_production`, with `sslmode=verify-full` and the existing shared CA.
+- Secret `PROMOTION_STAGING_BACKEND_TOKEN`: the running production backend's
+  `QA_TEMPLATE_PROMOTION_TOKEN`, used only for target-cache refresh.
+- Variable `EVIDENCE_STAGING_BACKEND_URL`: the canonical production backend
+  (`https://back-staging.superagent.estate/api/`). This URL is also used by cache
+  refresh; without `EVIDENCE_STAGING_BACKEND_TOKEN`, backend/log evidence stays
+  unavailable.
+
+Include the two secret names in `AWS_DEV_RUNTIME_SECRET_NAMES` and align the
+host's exact runtime policy, pinned policy hash, and narrowly scoped production
+SQL/cache-refresh guard before deployment. `EVIDENCE_STAGING_DATABASE_URL`
+continues to supply the read source. DEV inputs, the QA runner, client endpoint,
+`MCP_TOKEN`, and TLS handling are unchanged. Writer/cache configuration enables
+apply only for a current reviewed preview; configuring it does not itself migrate
+any template or change the prompt library.
 
 `qa_template_promotion_preview` reads both environments and creates a
 15-minute in-memory plan. `qa_template_promotion_apply` rechecks source and

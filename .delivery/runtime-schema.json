@@ -8,10 +8,13 @@
         "MCP_TOKEN",
         "PROMOTION_DEV_BACKEND_TOKEN",
         "PROMOTION_DEV_DATABASE_URL",
+        "PROMOTION_STAGING_BACKEND_TOKEN",
+        "PROMOTION_STAGING_DATABASE_URL",
         "QA_RUNNER_TOKEN"
       ],
       "public_names": [
         "EVIDENCE_DEV_BACKEND_URL",
+        "EVIDENCE_STAGING_BACKEND_URL",
         "HOME",
         "MCP_ALLOWED_HOSTS",
         "MCP_HOST",
