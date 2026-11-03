@@ -156,6 +156,8 @@ jobs:
         EVIDENCE_DEV_BACKEND_URL: ${{ vars.EVIDENCE_DEV_BACKEND_URL }}
         EVIDENCE_DEV_DATABASE_URL: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'EVIDENCE_DEV_DATABASE_URL')
           && secrets.EVIDENCE_DEV_DATABASE_URL || '' }}
+        EVIDENCE_STAGING_DATABASE_URL: ${{ contains(fromJSON(vars.AWS_DEV_RUNTIME_SECRET_NAMES || '[]'), 'EVIDENCE_STAGING_DATABASE_URL')
+          && secrets.EVIDENCE_STAGING_DATABASE_URL || '' }}
         HOME: ${{ vars.HOME }}
         MCP_ALLOWED_HOSTS: ${{ vars.MCP_ALLOWED_HOSTS }}
         MCP_HOST: ${{ vars.MCP_HOST }}

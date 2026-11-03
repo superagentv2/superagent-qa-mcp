@@ -4,6 +4,7 @@
       "secret_names": [
         "EVIDENCE_DEV_BACKEND_TOKEN",
         "EVIDENCE_DEV_DATABASE_URL",
+        "EVIDENCE_STAGING_DATABASE_URL",
         "MCP_TOKEN",
         "PROMOTION_DEV_BACKEND_TOKEN",
         "PROMOTION_DEV_DATABASE_URL",

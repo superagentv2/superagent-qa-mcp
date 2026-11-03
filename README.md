@@ -59,14 +59,25 @@ configured credentials use the direct PostgreSQL endpoint because the existing
 in the QA MCP GitHub environment. Node verifies the database TLS chain against
 that CA; the database certificate uses the cluster's internal name, so hostname
 verification is not available on its public endpoint. This remains the default.
-For AWS DEV, set `QA_DATABASE_TLS_VERIFY_FULL=true`, use the private RDS DNS
-hostname with `sslmode=verify-full` in both DEV database URLs, and supply the
+For the AWS-hosted MCP, set `QA_DATABASE_TLS_VERIFY_FULL=true`, use the RDS DNS
+hostname with `sslmode=verify-full` in each configured database URL, and supply the
 public RDS CA bundle in `QA_DATABASE_CA_CERT_B64`. This opt-in verifies both the
 certificate chain and hostname; a mismatched hostname fails the connection.
 Do not put SSL certificate/key or other TLS override parameters in database
 URLs: the helper owns the TLS configuration and rejects these overrides.
-Keep STAGING credentials absent from the dedicated AWS DEV service. The
-backend URLs should end in `/api/` (for example, the internal DEV and STAGING
+The existing AWS DEV MCP service may optionally expose read-only production
+database evidence through `EVIDENCE_STAGING_DATABASE_URL`. DEV connects to
+`superagent_dev`; STAGING connects to the separate `superagent_production`
+database and uses `superagent_staging_schema`. Both databases use the same RDS
+CA and verified TLS configuration. Enroll that URL as an `aws-dev` Actions
+secret, include its name in `AWS_DEV_RUNTIME_SECRET_NAMES`, and align the
+host runtime policy with the workflow schema before deploying. The client
+plugin endpoint and `MCP_TOKEN` stay unchanged.
+
+This database source does not configure a STAGING backend/log token, a production
+promotion writer, or a different QA runner. Leave those settings absent unless
+separately authorized. Backend URLs, when configured, should end in `/api/`
+(for example, the internal DEV and STAGING
 backend addresses). Each backend token must match that environment's
 `QA_EVIDENCE_TOKEN`; it is a service credential, distinct from the shared
 Codex-facing `MCP_TOKEN`. Empty settings leave the corresponding source
@@ -75,8 +86,10 @@ unavailable and `qa_data_capabilities_get` reports this without exposing values.
 The backend service token grants GET access only to trace current-state,
 trace metadata, and bounded call-log excerpts. Configure it as the
 `QA_EVIDENCE_TOKEN` GitHub environment secret for both backend deployments,
-and configure the matching `EVIDENCE_*_BACKEND_TOKEN` in the QA MCP DEV
-environment. Configure both database URLs and backend URLs there as well.
+and configure the matching `EVIDENCE_*_BACKEND_TOKEN` only for the corresponding
+backend evidence source explicitly being enabled. Database evidence and backend
+evidence are independent sources; enabling production SQL alone does not enable
+production backend/log access.
 No database password or service token belongs in this repository.
 
 Template promotion uses separate `PROMOTION_*_DATABASE_URL` credentials with
