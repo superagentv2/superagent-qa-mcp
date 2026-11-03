@@ -60,14 +60,19 @@ function configuration(template: Template) {
 function bundleHash(bundle: Bundle | { templates: Array<Template | null> }): string {
   return hash(bundle.templates);
 }
-function statusPair(rows: any[], label: string): Record<"PUBLISHED" | "DRAFT", any> {
+export function statusPair(rows: any[], label: string): Record<"PUBLISHED" | "DRAFT", any> {
   const published = rows.filter((row) => row.status === "PUBLISHED");
   const draft = rows.filter((row) => row.status === "DRAFT");
-  if (published.length !== 1 || draft.length !== 1 ||
-      draft[0].version_number !== published[0].version_number + 1) {
-    reject(`${label} must have exactly one current PUBLISHED version and its next DRAFT`);
+  const error = `${label} must have exactly one current PUBLISHED version and its next DRAFT`;
+  if (published.length !== 1 || rows.some((row) => !Number.isSafeInteger(row.version_number))) {
+    reject(error);
   }
-  return { PUBLISHED: published[0], DRAFT: draft[0] };
+  const next = published[0].version_number + 1;
+  const currentDraft = draft.filter((row) => row.version_number === next);
+  // Legacy DRAFT rows at or below the published version are history, not competing current drafts.
+  if (!Number.isSafeInteger(next) || currentDraft.length !== 1 ||
+      draft.some((row) => row.version_number > next)) reject(error);
+  return { PUBLISHED: published[0], DRAFT: currentDraft[0] };
 }
 async function loadTemplate(db: PoolClient, key: TemplateKey, lock = false): Promise<Template | null> {
   const matches = await db.query(`SELECT id, title, jurisdiction_code, product_family, template_type, slug

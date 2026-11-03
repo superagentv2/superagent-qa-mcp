@@ -1,6 +1,46 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { referencedTemplateKeys } from "../dist/template-promotion.js";
+import { referencedTemplateKeys, statusPair } from "../dist/template-promotion.js";
+
+function versionRow(status, version_number, id = `${status}-${version_number}`) {
+  return { id, status, version_number };
+}
+
+test("promotion selects the exact next draft while preserving historical draft rows", () => {
+  const published = versionRow("PUBLISHED", 202);
+  const current = versionRow("DRAFT", 203);
+  const rows = [versionRow("DRAFT", 195), current, versionRow("DRAFT", 194),
+    published, ...[193, 192, 191].map((number) => versionRow("DRAFT", number))];
+  const before = structuredClone(rows);
+  assert.deepEqual(statusPair(rows, "production"), { PUBLISHED: published, DRAFT: current });
+  assert.deepEqual(rows, before);
+});
+
+test("promotion accepts the DEV current pair and a stale draft at the published number", () => {
+  const published = versionRow("PUBLISHED", 274);
+  const current = versionRow("DRAFT", 275);
+  assert.deepEqual(statusPair([versionRow("DRAFT", 274), published, current], "DEV"),
+    { PUBLISHED: published, DRAFT: current });
+});
+
+const invalidPairs = {
+  "multiple published versions": [versionRow("PUBLISHED", 201), versionRow("PUBLISHED", 202), versionRow("DRAFT", 203)],
+  "missing published version": [versionRow("DRAFT", 203)],
+  "missing draft": [versionRow("PUBLISHED", 202)],
+  "historical drafts only": [versionRow("PUBLISHED", 202), versionRow("DRAFT", 195)],
+  "missing exact next draft": [versionRow("PUBLISHED", 202), versionRow("DRAFT", 204)],
+  "a newer competing draft": [versionRow("PUBLISHED", 202), versionRow("DRAFT", 203), versionRow("DRAFT", 204)],
+  "duplicate current drafts": [versionRow("PUBLISHED", 202), versionRow("DRAFT", 203, "first"), versionRow("DRAFT", 203, "second")],
+  "string version number": [versionRow("PUBLISHED", "202"), versionRow("DRAFT", 203)],
+  "fractional historical version": [versionRow("PUBLISHED", 202), versionRow("DRAFT", 203), versionRow("DRAFT", 191.5)],
+  "unsafe next version": [versionRow("PUBLISHED", Number.MAX_SAFE_INTEGER), versionRow("DRAFT", Number.MAX_SAFE_INTEGER + 1)],
+};
+for (const [description, rows] of Object.entries(invalidPairs)) {
+  test(`promotion rejects ${description}`, () => {
+    assert.throws(() => statusPair(rows, "production"),
+      { message: "production must have exactly one current PUBLISHED version and its next DRAFT" });
+  });
+}
 
 function version(fields) {
   return { pdfme_layout: { schemas: [fields] } };
