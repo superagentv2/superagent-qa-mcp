@@ -12,6 +12,8 @@ RUN npm run build
 
 FROM node:22-alpine AS runtime
 
+RUN apk add --no-cache 'zlib>=1.4-r0'
+
 WORKDIR /app
 ENV NODE_ENV=production
 ENV MCP_TRANSPORT=http
