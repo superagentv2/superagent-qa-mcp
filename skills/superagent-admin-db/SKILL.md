@@ -1,6 +1,6 @@
 ---
 name: superagent-admin-db
-description: "Use when Codex needs to inspect SuperAgent database state or admin debug evidence outside the SuperAgent codebase: voice-call transcripts, room/debug links, LiveKit trace history/current state/metadata, contract document fields_json, template pdfme_layout, signature/provider fields, QA run records, or schema-aware read-only SQL probes using local credentials."
+description: "Use when Codex needs SuperAgent admin debug evidence: voice-call room links and traces, WhatsApp Text Sessions users, links and interaction traces, or schema-aware read-only database inspection."
 ---
 
 # SuperAgent Admin DB
@@ -8,8 +8,9 @@ description: "Use when Codex needs to inspect SuperAgent database state or admin
 ## Purpose
 
 Use this skill to inspect SuperAgent runtime state when the active workspace is
-not the SuperAgent monorepo. The plugin supplies the operating knowledge and
-scripts; the user supplies local credentials in `~/.config/superagent/admin-db.env`.
+not the SuperAgent monorepo. The hosted MCP supplies room and Text Sessions
+evidence with server-side credentials. The bundled SQL and voice export scripts
+use user-supplied local credentials in `~/.config/superagent/admin-db.env`.
 
 Default to read-only evidence gathering. Do not mutate database rows, create
 fixtures, delete debug records, or call mutating admin endpoints unless the user
@@ -23,12 +24,15 @@ is outside this promotion.
 
 ## First Moves
 
-1. Confirm the user provided a room id, debug URL, document id, template slug,
-   contract instance id, or a concrete question.
+1. Identify a room id, voice debug URL, VAREA user id, WhatsApp sender/session id,
+   Text Sessions interaction link, document id, or concrete question.
 2. If QA MCP is available, call `qa_data_capabilities_get` and use its
    `qa_rooms_list`, `qa_room_get`, `qa_room_debug_get`, `qa_room_trace_get`,
    `qa_room_events_list`, `qa_room_logs_get`, `qa_room_fields_get`,
-   `qa_templates_list`, and `qa_template_version_get` tools first. Read
+   `qa_templates_list`, and `qa_template_version_get` tools first. For WhatsApp
+   evidence, use `qa_text_users_list`, `qa_text_user_links_list`,
+   `qa_text_link_get`, `qa_text_interactions_list`, `qa_text_interaction_get`,
+   or `qa_text_debug_link_get`. Read
    `../superagent-auto-qa/references/evidence-tools.md` for parameters,
    pagination, provenance, and prefill limits. Select `DEV` or `STAGING`
    explicitly; STAGING is production data.
@@ -37,6 +41,8 @@ is outside this promotion.
    that the required variables are present. Never print values.
 4. For voice-call evidence outside MCP, read `references/admin-debug-api.md` and prefer
    `scripts/call_debug_export.py`.
+   For WhatsApp evidence, read `references/text-debug-api.md`; its admin API
+   requires an admin bearer token outside the hosted MCP.
 5. For database evidence outside MCP, read `references/schema-map.md` and
    `references/query-recipes.md`, then use `scripts/db_query.py` for read-only
    SQL.
@@ -47,6 +53,11 @@ is outside this promotion.
 
 - Start with admin debug APIs for a room/debug URL because they return the same
   voice-session and trace data used by the admin debug page.
+- For a Text Sessions link, call `qa_text_debug_link_get` with the explicit
+  environment. For a user, list their sender links, then page interaction
+  summaries newest first and load only the specific trace needed. An unlinked
+  sender remains in the archive; relinking the same user and sender continues
+  the same cumulative session.
 - Use database probes when the question depends on persisted state, template
   layout, generated document metadata, provider ids, or joins across runtime
   tables.
@@ -75,6 +86,8 @@ Load only what the task needs:
 - `references/env-contract.md`: local env file path and variable names.
 - `references/admin-debug-api.md`: voice-session, transcript, debug, trace, and
   metadata endpoint access.
+- `references/text-debug-api.md`: WhatsApp Text Sessions identities, links,
+  pagination, interaction detail and copied-link access.
 - `references/schema-map.md`: database table map for documents, templates,
   voice/debug, and QA state.
 - `references/query-recipes.md`: safe read-only SQL probes.

@@ -8,6 +8,9 @@ const environment = z.enum(["DEV", "STAGING"]);
 const roomId = z.string().min(1).max(255).regex(/^[a-zA-Z0-9_-]+$/);
 const uuid = z.string().uuid();
 const pageSize = z.number().int().min(1).max(100).default(25);
+const textPage = z.number().int().min(0).max(1_000_000).default(0);
+const textId = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
+const clerkUserId = z.string().min(1).max(100).regex(/^[A-Za-z0-9_-]+$/);
 const schemas: Record<Environment, string> = {
   DEV: "superagent_dev_schema",
   STAGING: "superagent_staging_schema",
@@ -81,14 +84,14 @@ export function result(payload: unknown) {
 }
 function failure(error: unknown) {
   // Driver and upstream errors can contain connection strings, SQL, or response bodies.
-  const message = error instanceof Error && /not configured|Invalid cursor/.test(error.message)
+  const message = error instanceof Error && /not configured|Invalid cursor|Invalid text session debug link/.test(error.message)
     ? error.message : "Evidence request failed; check server configuration and logs";
   return { isError: true, content: [{ type: "text" as const, text: message }] };
 }
 export async function safe(fn: () => Promise<unknown>) {
   try { return result(await fn()); } catch (error) { return failure(error); }
 }
-async function backend(env: Environment, path: string): Promise<unknown> {
+async function backend(env: Environment, path: string, allowNotFound = false): Promise<unknown> {
   const { backendUrl, backendToken } = settings(env);
   if (!backendUrl || !backendToken) throw new Error(`${env} evidence backend is not configured`);
   const base = new URL(backendUrl);
@@ -99,8 +102,31 @@ async function backend(env: Environment, path: string): Promise<unknown> {
     headers: { "X-QA-Evidence-Token": backendToken },
     signal: AbortSignal.timeout(10000),
   });
+  if (response.status === 404 && allowNotFound) return null;
   if (!response.ok) throw new Error("Evidence backend request failed");
   return response.json();
+}
+
+function textDebugLink(value: string) {
+  let url: URL;
+  try { url = new URL(value); }
+  catch { throw new Error("Invalid text session debug link"); }
+  if (!/^https?:$/.test(url.protocol)) throw new Error("Invalid text session debug link");
+  const match = /^\/admin\/text-sessions\/([^/]+)\/([1-9][0-9]*)\/?$/.exec(url.pathname);
+  if (!match || url.searchParams.getAll("message").length > 1) {
+    throw new Error("Invalid text session debug link");
+  }
+  let userId: string;
+  try { userId = decodeURIComponent(match[1]); }
+  catch { throw new Error("Invalid text session debug link"); }
+  if (!clerkUserId.safeParse(userId).success) throw new Error("Invalid text session debug link");
+  const sessionId = Number(match[2]);
+  if (!Number.isSafeInteger(sessionId)) throw new Error("Invalid text session debug link");
+  const messageParam = url.searchParams.get("message");
+  const messageId = messageParam === null ? null : Number(messageParam);
+  if (messageParam !== null && (!/^[1-9][0-9]*$/.test(messageParam)
+      || !Number.isSafeInteger(messageId))) throw new Error("Invalid text session debug link");
+  return { userId, sessionId, messageId };
 }
 function fields(layout: any) {
   const schemas = Array.isArray(layout?.schemas) ? layout.schemas : [];
@@ -116,6 +142,56 @@ export function registerEvidenceTools(server: McpServer) {
       environment: env, production_data: env === "STAGING", database: Boolean(settings(env).databaseUrl),
       backend: Boolean(settings(env).backendUrl && settings(env).backendToken),
     })), access: "read-only", shared_mcp_token: true }));
+
+  server.tool("qa_text_users_list", "Page through VAREA users with archived WhatsApp links", {
+    environment, page: textPage, size: pageSize,
+  }, async (a) => safe(async () => ({ environment: a.environment, source: "admin_text_sessions_api",
+    ...await backend(a.environment, `/v1/admin/text-sessions/users?page=${a.page}&size=${a.size}`) as object })));
+
+  server.tool("qa_text_user_links_list", "Page through a VAREA user's current and unlinked WhatsApp senders", {
+    environment, user_clerk_id: clerkUserId, page: textPage, size: pageSize,
+  }, async (a) => safe(async () => ({ environment: a.environment, user_clerk_id: a.user_clerk_id,
+    source: "admin_text_sessions_api",
+    ...await backend(a.environment, `/v1/admin/text-sessions/users/${encodeURIComponent(a.user_clerk_id)}/sessions?page=${a.page}&size=${a.size}`) as object })));
+
+  server.tool("qa_text_link_get", "Read one WhatsApp sender's cumulative link identity and unlink/relink episodes", {
+    environment, session_id: textId,
+  }, async (a) => safe(async () => {
+    const base = `/v1/admin/text-sessions/${a.session_id}`;
+    const session = await backend(a.environment, base, true);
+    return { environment: a.environment, source: "admin_text_sessions_api", session,
+      episodes: session ? await backend(a.environment, `${base}/episodes`) : [] };
+  }));
+
+  server.tool("qa_text_interactions_list", "Page newest first through one WhatsApp sender's interaction summaries", {
+    environment, session_id: textId, page: textPage, size: pageSize,
+    anchor_id: textId.optional(),
+  }, async (a) => safe(async () => ({ environment: a.environment, session_id: a.session_id,
+    source: "admin_text_sessions_api",
+    ...await backend(a.environment, `/v1/admin/text-sessions/${a.session_id}/messages?page=${a.page}&size=${a.size}`
+      + (a.anchor_id === undefined ? "" : `&anchorId=${a.anchor_id}`)) as object })));
+
+  server.tool("qa_text_interaction_get", "Read one incoming message, response, lifecycle events and AI trace", {
+    environment, session_id: textId, message_id: textId,
+  }, async (a) => safe(async () => ({ environment: a.environment, session_id: a.session_id,
+    source: "admin_text_sessions_api",
+    interaction: await backend(a.environment,
+      `/v1/admin/text-sessions/${a.session_id}/messages/${a.message_id}`, true) })));
+
+  server.tool("qa_text_debug_link_get", "Resolve a copied Text Sessions link to its sender and optional interaction trace", {
+    environment, debug_url: z.string().min(1).max(2048),
+  }, async (a) => safe(async () => {
+    const { userId, sessionId, messageId } = textDebugLink(a.debug_url);
+    const base = `/v1/admin/text-sessions/${sessionId}`;
+    const session = await backend(a.environment, base, true) as Record<string, unknown> | null;
+    if (!session) return { environment: a.environment, source: "admin_text_sessions_api",
+      user_clerk_id: userId, session_id: sessionId, message_id: messageId, session: null };
+    if (session.userClerkId !== userId) throw new Error("Invalid text session debug link");
+    return { environment: a.environment, source: "admin_text_sessions_api", user_clerk_id: userId,
+      session_id: sessionId, message_id: messageId, session,
+      ...(messageId === null ? {} : { interaction: await backend(a.environment,
+        `${base}/messages/${messageId}`, true) }) };
+  }));
 
   server.tool("qa_rooms_list", "List active and historical call rooms with date/status filters", {
     environment, limit: pageSize, cursor: z.string().optional(), status: z.string().max(50).optional(),

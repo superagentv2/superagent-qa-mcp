@@ -48,7 +48,8 @@ The admin user gets `MCP_TOKEN`; the admin user does not get `QA_RUNNER_TOKEN`.
 `QA_MCP_TOKEN` is accepted only as a backward-compatible fallback for older
 local configs; use `MCP_TOKEN` going forward.
 
-The `EVIDENCE_*` settings enable read-only room and template tools. DEV and
+The `EVIDENCE_*` settings enable read-only room, template, and WhatsApp Text
+Sessions tools. DEV and
 STAGING are selected explicitly on every call; STAGING is the production data
 schema. Each database URL should use a dedicated SELECT-only PostgreSQL role
 with access solely to its matching schema. Queries are fixed and parameterized,
@@ -85,7 +86,8 @@ Codex-facing `MCP_TOKEN`. Empty settings leave the corresponding source
 unavailable and `qa_data_capabilities_get` reports this without exposing values.
 
 The backend service token grants GET access only to trace current-state,
-trace metadata, and bounded call-log excerpts. Configure it as the
+trace metadata, bounded call-log excerpts, and the six Text Sessions read
+routes. It does not grant general admin access. Configure it as the
 `QA_EVIDENCE_TOKEN` GitHub environment secret for both backend deployments,
 and configure the matching `EVIDENCE_*_BACKEND_TOKEN` only for the corresponding
 backend evidence source explicitly being enabled. Database evidence and backend
@@ -201,8 +203,9 @@ The server exposes the QA automation API as MCP tools:
 - Runs, run markdown, jobs, cancel, single run, bulk run, suite run, profile
   run, and triage.
 - Legacy scenario compatibility endpoints.
-- Read-only DEV/STAGING room, trace, event, log, document field, and template
-  inspection. See `skills/superagent-auto-qa/references/evidence-tools.md`.
+- Read-only DEV/STAGING room, trace, event, log, document field, template,
+  and WhatsApp Text Sessions inspection. See
+  `skills/superagent-auto-qa/references/evidence-tools.md`.
 - Explicit preview/apply template configuration promotion between DEV and
   STAGING, with a separate cache-refresh recovery tool. See
   `skills/superagent-auto-qa/references/template-promotion.md`.
@@ -282,8 +285,8 @@ The plugin installs:
 - The hosted SuperAgent QA MCP config.
 - A concise `superagent-auto-qa` skill that explains the QA automation system
   and tells Codex how to use the MCP safely.
-- A `superagent-admin-db` skill for read-only SuperAgent database inspection
-  and admin debug evidence export from room/debug links.
+- A `superagent-admin-db` skill for read-only SuperAgent database inspection,
+  voice room debug links, and WhatsApp Text Sessions user, sender and trace links.
 
 The plugin does not include secrets. Admin users provide only `MCP_TOKEN`.
 `QA_RUNNER_TOKEN` stays in the hosted MCP environment.

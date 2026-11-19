@@ -1,4 +1,7 @@
-# Admin Debug API
+# Voice Admin Debug API
+
+For WhatsApp Text Sessions links and interaction traces, use
+`text-debug-api.md` instead.
 
 Use these endpoints for room/debug-link investigations before reaching for raw
 SQL. They mirror the admin debug page surfaces and are usually the fastest path

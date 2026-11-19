@@ -1,6 +1,6 @@
 {
   "name": "superagent-qa",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Codex plugin for SuperAgent automation QA, admin debug, and database inspection workflows.",
   "author": {
     "name": "SuperAgent",
@@ -16,7 +16,7 @@
   "interface": {
     "displayName": "SuperAgent QA",
     "shortDescription": "Manage SuperAgent QA, call debug, and database inspection through Codex.",
-    "longDescription": "SuperAgent QA gives Codex an MCP-backed control surface and operating guides for inspecting manifests, understanding test definitions, managing lifecycle, editing QA files, linting, running tests, reading run history, exporting voice-call admin debug evidence, and safely inspecting SuperAgent database state.",
+    "longDescription": "SuperAgent QA gives Codex an MCP-backed control surface and operating guides for inspecting manifests, managing QA tests and run history, reading voice-call and WhatsApp Text Sessions debug traces, and safely inspecting SuperAgent database state.",
     "developerName": "SuperAgent",
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Write"],
@@ -24,7 +24,8 @@
     "defaultPrompt": [
       "Inspect the SuperAgent QA catalog.",
       "Generate a SuperAgent QA draft test.",
-      "Inspect a SuperAgent room trace."
+      "Inspect a SuperAgent room trace.",
+      "Inspect a WhatsApp Text Sessions interaction link."
     ],
     "brandColor": "#15803D"
   }

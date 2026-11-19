@@ -42,6 +42,32 @@ response includes flattened PDFMe fields and prefill mappings. Set
 `full_config=true` only when the full versioned PDFMe layout and prompt texts
 are needed. Historical rows can be inactive or deprecated and remain readable.
 
+## WhatsApp Text Sessions investigation
+
+1. Use `qa_text_users_list` to discover only VAREA users with an archived
+   WhatsApp link. Use `qa_text_user_links_list` with an exact `user_clerk_id`
+   to list that user's current and unlinked senders.
+2. Use `qa_text_link_get` with the sender's numeric `session_id` to read its
+   cumulative identity and unlink/relink episodes. A new link by the same
+   VAREA user and sender continues this session.
+3. Use `qa_text_interactions_list` for newest-first message and response
+   summaries. Follow `page` and `hasNext`; pass the first response's `anchorId`
+   as `anchor_id` on later pages so new messages do not shift the list.
+4. Use `qa_text_interaction_get` with `session_id` and `message_id` for one
+   full interaction, including inbound text or voice-note transcript, response,
+   lifecycle `events`, and AI `trace` from `provenance.trace`. Commands and
+   failed attempts may have lifecycle events without an AI trace.
+5. For a copied admin link such as
+   `/admin/text-sessions/{userClerkId}/{sessionId}?message={messageId}`,
+   call `qa_text_debug_link_get` with the full URL. It checks that the link's
+   user owns the sender session and fetches only the linked interaction. Without
+   `message`, it returns the sender session only.
+
+These tools read the same backend endpoints as the admin UI using the narrow
+QA evidence token. No audio files or older predeployment conversations are
+available. Always state the selected environment and exact IDs; summarize
+private text rather than pasting full conversations into chat.
+
 All tools return full relevant evidence within bounded pages. They never
 return reusable signed download URLs or backend/database credentials. Cite
 the environment, room/version ID, source tool, cursor/page, and any

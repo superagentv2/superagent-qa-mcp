@@ -70,6 +70,21 @@ This map names the SuperAgent tables that most often explain bug reports.
 - Columns: `id`, `room_id`, `user_id`, `category`, `event_type`, `data`,
   `duration_ms`, `source`, `created_at`.
 
+## WhatsApp Text Debug Archive
+
+`whatsapp_text_sessions` records one durable `(user_clerk_id, sender_id)` pair;
+its numeric `id` is the admin and MCP `session_id`. It exists for linked
+senders even when no message has arrived, and remains after unlink.
+
+`whatsapp_text_episodes` records each link `connection_id`, `connected_at`,
+and `unlinked_at` for that pair. Relinking adds an episode to the same session.
+
+`whatsapp_text_messages` records one incoming text, command, or voice-note
+transcript with its response, state, attempts, lifecycle `events`, and JSONB
+`provenance`. The AI trace is `provenance -> 'trace'`. Use its numeric `id`
+together with `session_id` for exact interaction lookup. No audio file is
+stored in this archive.
+
 ## QA
 
 `qa_simulation`
