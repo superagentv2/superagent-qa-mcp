@@ -45,7 +45,7 @@ def check_basic_scan(config, repository, digest, client=None):
     deadline = time.monotonic() + 240
     while True:
         try:
-            result = client.describe_image_scan_findings(repositoryName=repository, imageId={"imageDigest": digest})
+            result = client.describe_image_scan_findings(repositoryName=repository, imageId={"imageDigest": digest}, maxResults=1000)
             status = result["imageScanStatus"]["status"]
         except ClientError as error:
             if error.response["Error"]["Code"] != "ScanNotFoundException":
@@ -57,6 +57,21 @@ def check_basic_scan(config, repository, digest, client=None):
             completed = findings.get("imageScanCompletedAt")
             require(isinstance(completed, datetime) and (datetime.now(timezone.utc) - completed).total_seconds() <= 86400, "OS scan older than 24h; refresh scan before promotion")
             counts = findings.get("findingSeverityCounts", {})
+            if counts.get("CRITICAL", 0):
+                critical = []
+                for finding in findings.get("findings", []) or []:
+                    if finding.get("severity") == "CRITICAL":
+                        attributes = {item.get("key"): item.get("value") for item in finding.get("attributes", []) or []
+                                      if item.get("key") in {"package_name", "package_version", "fixed_in_version"}}
+                        critical.append({"id": finding.get("name"), **attributes})
+                for finding in findings.get("enhancedFindings", []) or []:
+                    if finding.get("severity") == "CRITICAL":
+                        details = finding.get("packageVulnerabilityDetails") or {}
+                        packages = [{key: package.get(key) for key in ("name", "version", "fixedInVersion")}
+                                    for package in (details.get("vulnerablePackages") or [])[:3]]
+                        critical.append({"id": details.get("vulnerabilityId"), "packages": packages})
+                print("IMAGE_SCAN_CRITICAL=" + json.dumps({"count": counts["CRITICAL"],
+                                                           "findings": critical[:20]}, sort_keys=True), flush=True)
             require(counts.get("CRITICAL", 0) == 0, "Critical OS image findings block deployment")
             return {"status": status, "severity_counts": counts}
         require(status in {"PENDING", "IN_PROGRESS"}, "OS image scan did not complete successfully")
